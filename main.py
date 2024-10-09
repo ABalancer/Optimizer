@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.integrate import dblquad
-
+import matplotlib.pyplot as plt
 
 # Constants
 m_T = 80.0  # Total mass (kg)
@@ -38,18 +38,45 @@ def spatial_integral(t, x_j, y_i, c_wj, c_hi):
     y_upper = y_i + c_hi / 2
 
     # Perform the double integration
-    result, _ = dblquad(integrand, x_lower, x_upper, lambda x: y_lower, lambda x: y_upper)
+    result, _ = dblquad(integrand, x_lower, x_upper, lambda x: y_lower, lambda x: y_upper, epsabs=1e-8, epsrel=1e-8)
 
     return result
 
 
-# Example use for one time step
-t = 2.5  # Current time in seconds (s)
-x_j = 0.16  # Midpoint distance of x in column j (m)
-y_i = 0.24  # Midpoint distance of y in column i (m)
-c_wj = 0.015  # Width of conductor track column (m)
-c_hi = 0.015  # Height of conductor track row (m)
+if __name__ == "__main__":
 
-# Calculate the spatial integral
-integral_value = spatial_integral(t, x_j, y_i, c_wj, c_hi)
-print(f"Integral value at time t={t}: {integral_value}")
+    # Example use for one time step
+    t = 2.5  # Current time in seconds (s)
+    c_w = 0.015  # Width of conductor track column (m)
+    c_h = 0.015  # Height of conductor track row (m)
+    p_w = 0.015  # Pitch width for column spacing (m)
+    p_h = 0.015  # Pitch height for column spacing (m)
+    n_c = 16  # Number of columns
+    n_r = 16  # Number of rows
+    results = np.zeros((n_r, n_c))
+    centre_x, centre_y = c_w/2, c_h/2
+
+    # Calculate the spatial integral
+    for i in range(0, 16):
+        for j in range(0, 16):
+            results[i][j] = spatial_integral(t, centre_x, centre_y, c_w, c_h)
+            centre_x += c_w + p_w
+        centre_x = c_w / 2
+        centre_y += c_h + p_h
+
+    # Create the heatmap
+    plt.figure(figsize=(8, 8))  # Create a figure with a set size
+
+    # Use imshow to display the heatmap
+    plt.imshow(results, cmap='hot', interpolation='nearest')
+
+    # Add color bar to show the scale of values
+    plt.colorbar()
+
+    # Add labels and title
+    plt.title("Heatmap of Integration Results")
+    plt.xlabel("Columns, index j")
+    plt.ylabel("Rows, index i")
+
+    # Show the plot
+    plt.show()
