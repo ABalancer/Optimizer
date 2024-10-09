@@ -69,7 +69,7 @@ def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitc
     return x_E, y_E
 
 
-def simulation_scenario(time_step, conductor_width, conductor_height, pitch_widths, pitch_heights):
+def simulation_scenario(time_step, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
 
     n_c = len(pitch_widths)  # Number of columns
     n_r = len(pitch_heights)  # Number of rows
@@ -77,20 +77,20 @@ def simulation_scenario(time_step, conductor_width, conductor_height, pitch_widt
     pitch_heights = np.zeros(n_r)
     pitch_widths = np.zeros(n_c)
     pressure_results = np.zeros((n_r, n_c))
-    conductor_centre_x, conductor_centre_y = conductor_width / 2, conductor_height / 2
+    conductor_centre_x, conductor_centre_y = conductor_widths[0] / 2, conductor_heights[0] / 2
     time = 0
 
     for i in range(0, n_r):
         for j in range(0, n_c):
             # Calculate the spatial integral
             pressure_results[i][j] = spatial_integral(time_step, conductor_centre_x, conductor_centre_y,
-                                                      conductor_width, conductor_height)
-            conductor_centre_x += conductor_width + pitch_widths[j]
-        conductor_centre_x = conductor_width / 2
-        conductor_centre_y += conductor_height + pitch_heights[i]
+                                                      conductor_widths[j], conductor_heights[i])
+            conductor_centre_x += conductor_widths[j] + pitch_widths[j]
+        conductor_centre_x = conductor_widths[0] / 2
+        conductor_centre_y += conductor_heights[i] + pitch_heights[i]
 
-    x, y = centre_of_pressure(n_r, n_c, conductor_width, pitch_widths,
-                              conductor_height, conductor_width, pressure_results)
+    x, y = centre_of_pressure(n_r, n_c, conductor_widths, pitch_widths,
+                              conductor_heights, pitch_heights, pressure_results)
 
     return x, y, pressure_results
 
@@ -105,7 +105,9 @@ if __name__ == "__main__":
 
     pitch_widths = np.array(16*[0.015])
     pitch_heights = np.array(16*[0.015])
-    x, y, pressure_results = simulation_scenario(2.5, 0.015, 0.015,
+    conductor_widths = np.array(16*[0.015])
+    conductor_heights = np.array(16*[0.015])
+    x, y, pressure_results = simulation_scenario(1.25, conductor_widths, conductor_heights,
                                                  pitch_widths, pitch_heights)
     print(x, y)
 
