@@ -26,10 +26,10 @@ def P(x, y, t):
 
 
 # Perform the double integral over x and y for a specific time t
-def spatial_integral(t, x_j, y_i, c_wj, c_hi):
+def spatial_integral(time, x_j, y_i, c_wj, c_hi):
     # Define the integrand function
     def integrand(y, x):
-        return P(x, y, t)
+        return P(x, y, time)
 
     # Bounds for x and y based on c_wj and c_hi
     x_lower = x_j - c_wj / 2
