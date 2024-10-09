@@ -43,32 +43,75 @@ def spatial_integral(time, x_j, y_i, c_wj, c_hi):
     return result
 
 
+def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitch_widths,
+                       conductor_heights, pitch_heights, pressure):
+    # Initialize sums
+    numerator_x = 0
+    numerator_y = 0
+    denominator = 0
+
+    # Loop over all regions i (height) and j (width)
+    for i in range(number_of_rows):
+        for j in range(number_of_columns):
+            # Compute x_j and y_i based on the provided formulas
+            x_j = 0.5 * conductor_widths[j] + sum(conductor_widths[k] + pitch_widths[k] for k in range(j))
+            y_i = 0.5 * conductor_heights[i] + sum(conductor_heights[k] + pitch_heights[k] for k in range(i))
+
+            # Add to numerators and denominator
+            numerator_x += x_j * pressure[i][j]
+            numerator_y += y_i * pressure[i][j]
+            denominator += pressure[i][j]
+
+    # Compute centre of pressure
+    x_E = numerator_x / denominator if denominator != 0 else 0
+    y_E = numerator_y / denominator if denominator != 0 else 0
+
+    return x_E, y_E
+
+
 if __name__ == "__main__":
 
     # Example use for one time step
+    mat_width = 0.48
+    mat_height = 0.48
+    mat_resolution = 100
+
     t = 2.5  # Current time in seconds (s)
-    c_w = 0.015  # Width of conductor track column (m)
-    c_h = 0.015  # Height of conductor track row (m)
-    p_w = 0.015  # Pitch width for column spacing (m)
-    p_h = 0.015  # Pitch height for column spacing (m)
-    n_c = 16  # Number of columns
-    n_r = 16  # Number of rows
-    results = np.zeros((n_r, n_c))
-    centre_x, centre_y = c_w/2, c_h/2
+    c_w = mat_width/(mat_resolution*2)  # Width of conductor track column (m)
+    c_h = mat_height/(mat_resolution*2)  # Height of conductor track row (m)
+    p_w = mat_width/(mat_resolution*2)  # Pitch width for column spacing (m)
+    p_h = mat_height/(mat_resolution*2)  # Pitch height for column spacing (m)
+    n_c = mat_resolution  # Number of columns
+    n_r = mat_resolution  # Number of rows
+
+    conductor_heights = np.zeros(n_r)
+    conductor_widths = np.zeros(n_c)
+    pitch_heights = np.zeros(n_r)
+    pitch_widths = np.zeros(n_c)
+    pressure_results = np.zeros((n_r, n_c))
+    conductor_centre_x, conductor_centre_y = c_w / 2, c_h / 2
 
     # Calculate the spatial integral
-    for i in range(0, 16):
-        for j in range(0, 16):
-            results[i][j] = spatial_integral(t, centre_x, centre_y, c_w, c_h)
-            centre_x += c_w + p_w
-        centre_x = c_w / 2
-        centre_y += c_h + p_h
+    for i in range(0, n_r):
+        for j in range(0, n_c):
+            pressure_results[i][j] = spatial_integral(t, conductor_centre_x, conductor_centre_y, c_w, c_h)
+            conductor_centre_x += c_w + p_w
+            conductor_widths[j] = c_w
+            pitch_widths[j] = p_w
+        conductor_centre_x = c_w / 2
+        conductor_centre_y += c_h + p_h
+        conductor_heights[i] = c_h
+        pitch_heights [i] = p_h
+
+    x, y = centre_of_pressure(n_r, n_c, conductor_widths, pitch_widths,
+                              conductor_heights, conductor_widths, pressure_results)
+    print(x, y)
 
     # Create the heatmap
     plt.figure(figsize=(8, 8))  # Create a figure with a set size
 
     # Use imshow to display the heatmap
-    plt.imshow(results, cmap='hot', interpolation='nearest')
+    plt.imshow(pressure_results, cmap='hot', interpolation='nearest')
 
     # Add color bar to show the scale of values
     plt.colorbar()
