@@ -117,14 +117,14 @@ if __name__ == "__main__":
     cbar = plt.colorbar(heatmap)
 
     # Simulation Settings
-    time_step = 0.5  # Seconds
+    time_step = 0.1  # Seconds
 
     time_steps = np.arange(0, 5 + time_step, time_step)
     cop_values = np.zeros((len(time_steps), 2))
-    pitch_widths = np.array(16*[0.015])
-    pitch_heights = np.array(16*[0.015])
-    conductor_widths = np.array(16*[0.015])
-    conductor_heights = np.array(16*[0.015])
+    pitch_widths = np.array(128*[0.001875])
+    pitch_heights = np.array(128*[0.001875])
+    conductor_widths = np.array(128*[0.001875])
+    conductor_heights = np.array(128*[0.001875])
     for t in time_steps:
         x, y, pressure_results = simulation_scenario(t, conductor_widths, conductor_heights,
                                                      pitch_widths, pitch_heights)
