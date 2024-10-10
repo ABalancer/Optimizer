@@ -69,21 +69,18 @@ def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitc
     return x_E, y_E
 
 
-def simulation_scenario(time_step, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
+def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
 
     n_c = len(pitch_widths)  # Number of columns
     n_r = len(pitch_heights)  # Number of rows
 
-    pitch_heights = np.zeros(n_r)
-    pitch_widths = np.zeros(n_c)
     pressure_results = np.zeros((n_r, n_c))
     conductor_centre_x, conductor_centre_y = conductor_widths[0] / 2, conductor_heights[0] / 2
-    time = 0
 
     for i in range(0, n_r):
         for j in range(0, n_c):
             # Calculate the spatial integral
-            pressure_results[i][j] = spatial_integral(time_step, conductor_centre_x, conductor_centre_y,
+            pressure_results[i][j] = spatial_integral(time, conductor_centre_x, conductor_centre_y,
                                                       conductor_widths[j], conductor_heights[i])
             conductor_centre_x += conductor_widths[j] + pitch_widths[j]
         conductor_centre_x = conductor_widths[0] / 2
@@ -95,35 +92,43 @@ def simulation_scenario(time_step, conductor_widths, conductor_heights, pitch_wi
     return x, y, pressure_results
 
 
+def bruteforcer():
+
+
+def update_heatmap(pressure_results):
+    heatmap.set_data(pressure_results)  # Update the data
+    cbar.update_normal(heatmap)  # Update the colorbar based on new data
+    plt.draw()  # Redraw the figure
+    plt.pause(0.1)  # Pause to allow the update
+
+    return plt, heatmap, cbar
+
+
 if __name__ == "__main__":
+    # Heatmap
+    data = np.random.random((16, 16))
+    fig, ax = plt.subplots()
+    heatmap = ax.imshow(data, cmap='hot', interpolation='nearest')
+    # Add labels, title, colour bar
+    plt.title("Pressure Map")
+    plt.xlabel("x_j Index")
+    plt.ylabel("y_i Index")
+    cbar = plt.colorbar(heatmap)
 
-    # Example use for one time step
-    mat_width = 0.48
-    mat_height = 0.48
-    mat_resolution = 100
-    time_step = 0.1  # Seconds
+    # Simulation Settings
+    time_step = 0.5  # Seconds
 
+    time_steps = np.arange(0, 5 + time_step, time_step)
+    cop_values = np.zeros((len(time_steps), 2))
     pitch_widths = np.array(16*[0.015])
     pitch_heights = np.array(16*[0.015])
     conductor_widths = np.array(16*[0.015])
     conductor_heights = np.array(16*[0.015])
-    x, y, pressure_results = simulation_scenario(1.25, conductor_widths, conductor_heights,
-                                                 pitch_widths, pitch_heights)
-    print(x, y)
+    for t in time_steps:
+        x, y, pressure_results = simulation_scenario(t, conductor_widths, conductor_heights,
+                                                     pitch_widths, pitch_heights)
+        cop_values[np.where(time_steps == t)[0]] = [x, y]
+        print("time = %f, x = %f, y = %f" % (t, x, y))
+        # update_heatmap(pressure_results)
 
-    # Create the heatmap
-    plt.figure(figsize=(8, 8))  # Create a figure with a set size
-
-    # Use imshow to display the heatmap
-    plt.imshow(pressure_results, cmap='hot', interpolation='nearest')
-
-    # Add color bar to show the scale of values
-    plt.colorbar()
-
-    # Add labels and title
-    plt.title("Heatmap of Integration Results")
-    plt.xlabel("Columns, index j")
-    plt.ylabel("Rows, index i")
-
-    # Show the plot
-    plt.show()
+    np.save("centre_of_pressure_results.npy", cop_values)
