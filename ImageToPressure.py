@@ -1,8 +1,9 @@
-from PIL import Image
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy.spatial import cKDTree
+import numpy as np
+from PIL import Image
+from scipy.interpolate import interp1d
 from matplotlib.colors import hex2color
+
 
 # Load the heatmap image
 image_path = 'foot_pressure.png'
@@ -22,24 +23,25 @@ color_map = {
 }
 
 # Convert hex color codes to RGB values
-color_rgb = {hex2color(k): v for k, v in color_map.items()}
+color_rgb = np.array([hex2color(k) for k in color_map.keys()]) * 255  # Convert to 0-255 range
+pressures = np.array(list(color_map.values()))  # Corresponding pressures
 
-# Create arrays for interpolation
-colors = np.array(list(color_rgb.keys()))  # Array of RGB values
-pressures = np.array(list(color_rgb.values()))  # Corresponding pressures
-
-# Build a k-D tree for efficient nearest-neighbor lookup
-tree = cKDTree(colors)
+# Create an interpolation function for each color channel (R, G, B)
+r_interp = interp1d(color_rgb[:, 0], pressures, bounds_error=False, fill_value="extrapolate")
+g_interp = interp1d(color_rgb[:, 1], pressures, bounds_error=False, fill_value="extrapolate")
+b_interp = interp1d(color_rgb[:, 2], pressures, bounds_error=False, fill_value="extrapolate")
 
 # Convert the image to a numpy array of RGB values
 image_data = np.array(image)
 
-
-# Function to map an RGB color to a pressure value using nearest neighbor interpolation
+# Function to map an RGB color to a pressure value using interpolation
 def get_pressure_from_color(color):
-    distance, idx = tree.query(color / 255.0)  # Normalize color to [0,1] range
-    return pressures[idx]
-
+    r, g, b = color
+    pressure_r = r_interp(r)
+    pressure_g = g_interp(g)
+    pressure_b = b_interp(b)
+    # Take the average of interpolated pressure values across R, G, and B channels
+    return (pressure_r + pressure_g + pressure_b) / 3.0
 
 # Sample the image and get pressure values
 height, width, _ = image_data.shape
