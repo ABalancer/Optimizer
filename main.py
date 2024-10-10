@@ -93,6 +93,7 @@ def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths,
 
 
 def bruteforcer():
+    print("Todo")
 
 
 def update_heatmap(pressure_results):
@@ -106,7 +107,7 @@ def update_heatmap(pressure_results):
 
 if __name__ == "__main__":
     # Heatmap
-    data = np.random.random((16, 16))
+    data = np.random.random((32, 32))
     fig, ax = plt.subplots()
     heatmap = ax.imshow(data, cmap='hot', interpolation='nearest')
     # Add labels, title, colour bar
