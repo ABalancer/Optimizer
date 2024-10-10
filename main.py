@@ -120,7 +120,7 @@ if __name__ == "__main__":
     time_step = 0.1  # Seconds
 
     time_steps = np.arange(0, 5 + time_step, time_step)
-    cop_values = np.zeros((len(time_steps), 2))
+    cop_values = np.zeros((len(time_steps), 3))
     pitch_widths = np.array(128*[0.001875])
     pitch_heights = np.array(128*[0.001875])
     conductor_widths = np.array(128*[0.001875])
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     for t in time_steps:
         x, y, pressure_results = simulation_scenario(t, conductor_widths, conductor_heights,
                                                      pitch_widths, pitch_heights)
-        cop_values[np.where(time_steps == t)[0]] = [x, y]
+        cop_values[np.where(time_steps == t)[0]] = [t, x, y]
         print("time = %f, x = %f, y = %f" % (t, x, y))
         # update_heatmap(pressure_results)
 
