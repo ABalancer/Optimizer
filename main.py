@@ -55,15 +55,6 @@ def bruteforcer():
     print("Todo")
 
 
-def update_heatmap(pressure_results):
-    heatmap.set_data(pressure_results)  # Update the data
-    cbar.update_normal(heatmap)  # Update the colorbar based on new data
-    plt.draw()  # Redraw the figure
-    plt.pause(0.1)  # Pause to allow the update
-
-    return plt, heatmap, cbar
-
-
 def move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_matrix_shape):
     mat_matrix = np.zeros((round(1000*mat_matrix_shape[0]), round(1000*mat_matrix_shape[1])))
     foot_height, foot_width = left_foot_profile.shape
@@ -101,6 +92,23 @@ def plot_heatmap(heatmap_matrix):
     plt.show()
 
 
+def high_res_centre_of_pressure(heatmap_matrix):
+    # Dimensions of the image
+    height, width = heatmap_matrix.shape
+
+    # Create coordinate grids for x and y
+    x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
+
+    # Compute the total pressure (sum of all pixel pressures)
+    total_pressure = np.sum(heatmap_matrix)
+
+    # Compute the weighted sum for the x and y coordinates
+    x = np.sum(x_coords * heatmap_matrix) / total_pressure
+    y = np.sum(y_coords * heatmap_matrix) / total_pressure
+
+    return x, y
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
@@ -110,8 +118,11 @@ if __name__ == "__main__":
     left_foot_centre = (240, 168)
     right_foot_centre = (240, 312)
 
-    pressure_map = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
-    plot_heatmap(pressure_map)
+    heatmap_matrix = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
+    plot_heatmap(heatmap_matrix)
+
+    x_cop, y_cop = high_res_centre_of_pressure(heatmap_matrix)
+    print(x_cop, y_cop)
 
     '''
     # Heatmap
