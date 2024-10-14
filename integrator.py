@@ -12,6 +12,37 @@ x_l, y_l = 0.168, 0.24  # Left object's centre coordinates (m)
 x_r, y_r = 0.312, 0.24  # Right object's centre coordinates (m)
 
 
+# Piecewise function P(x, y, t)
+def P(x, y, t):
+    left_condition = (2 * (y - y_l) / h) ** 2 + (2 * (x - x_l) / w) ** 2 <= 1
+    right_condition = (2 * (y - y_r) / h) ** 2 + (2 * (x - x_r) / w) ** 2 <= 1
+
+    if left_condition:
+        return (4 * m_T * g / (T * w * h * np.pi)) * t
+    elif right_condition:
+        return (4 * m_T * g / (T * w * h * np.pi)) * (T - t)
+    else:
+        return 0
+
+
+# Perform the double integral over x and y for a specific time t
+def spatial_integral(time, x_j, y_i, c_wj, c_hi):
+    # Define the integrand function
+    def integrand(y, x):
+        return P(x, y, time)
+
+    # Bounds for x and y based on c_wj and c_hi
+    x_lower = x_j - c_wj / 2
+    x_upper = x_j + c_wj / 2
+    y_lower = y_i - c_hi / 2
+    y_upper = y_i + c_hi / 2
+
+    # Perform the double integration
+    result, _ = dblquad(integrand, x_lower, x_upper, lambda x: y_lower, lambda x: y_upper, epsabs=1e-8, epsrel=1e-8)
+
+    return result
+
+
 def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitch_widths,
                        conductor_heights, pitch_heights, pressure):
     # Initialize sums
@@ -39,6 +70,7 @@ def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitc
 
 
 def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
+
     n_c = len(pitch_widths)  # Number of columns
     n_r = len(pitch_heights)  # Number of rows
 

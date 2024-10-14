@@ -4,12 +4,6 @@ from PIL import Image
 from scipy.interpolate import interp1d
 from matplotlib.colors import hex2color
 
-
-# Load the heatmap image
-image_path = 'foot_pressure_2.png'
-image = Image.open(image_path)
-image = image.convert('RGB')  # Ensure image is in RGB format
-
 # Define the known colors and pressure values
 color_map = {
     '#000000': 0,
@@ -29,9 +23,6 @@ r_interp = interp1d(color_rgb[:, 0], pressures, bounds_error=False, fill_value="
 g_interp = interp1d(color_rgb[:, 1], pressures, bounds_error=False, fill_value="extrapolate")
 b_interp = interp1d(color_rgb[:, 2], pressures, bounds_error=False, fill_value="extrapolate")
 
-# Convert the image to a numpy array of RGB values
-image_data = np.array(image)
-
 
 # Function to map an RGB color to a pressure value using interpolation
 def get_pressure_from_color(color):
@@ -43,51 +34,60 @@ def get_pressure_from_color(color):
     return (pressure_r + pressure_g + pressure_b) / 3.0
 
 
-# Sample the image and get pressure values
-height, width, _ = image_data.shape
-pressure_map = np.zeros((height, width))
+if __name__ == "__main__":
+    # Load the heatmap image
+    image_path = 'foot_pressure_4.png'
+    image = Image.open(image_path)
+    image = image.convert('RGB')  # Ensure image is in RGB format
 
-for i in range(height):
-    for j in range(width):
-        rgb = image_data[i, j]
-        pressure = get_pressure_from_color(rgb)
-        pressure_map[i, j] = pressure
+    # Convert the image to a numpy array of RGB values
+    image_data = np.array(image)
 
-# Optionally, you can save the pressure map or analyze it further
-# Example: Save as a CSV file
-np.savetxt("pressure_map.csv", pressure_map, delimiter=",")
+    # Sample the image and get pressure values
+    height, width, _ = image_data.shape
+    pressure_map = np.zeros((height, width))
 
-# Assuming `pressure_map` is the 2D array of pressure values obtained from the previous code
+    for i in range(height):
+        for j in range(width):
+            rgb = image_data[i, j]
+            pressure = get_pressure_from_color(rgb)
+            pressure_map[i, j] = pressure
 
-# Dimensions of the image
-height, width = pressure_map.shape
+    # Optionally, you can save the pressure map or analyze it further
+    # Example: Save as a CSV file
+    np.savetxt("pressure_map.csv", pressure_map, delimiter=",")
 
-# Create coordinate grids for x and y
-x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
+    # Assuming `pressure_map` is the 2D array of pressure values obtained from the previous code
 
-# Compute the total pressure (sum of all pixel pressures)
-total_pressure = np.sum(pressure_map)
+    # Dimensions of the image
+    height, width = pressure_map.shape
 
-# Compute the weighted sum for the x and y coordinates
-x_COP = np.sum(x_coords * pressure_map) / total_pressure
-y_COP = np.sum(y_coords * pressure_map) / total_pressure
+    # Create coordinate grids for x and y
+    x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
 
-# Print the computed center of pressure
-print(f"Center of Pressure (x, y): ({x_COP}, {y_COP})")
+    # Compute the total pressure (sum of all pixel pressures)
+    total_pressure = np.sum(pressure_map)
 
-# Create a heatmap
-plt.imshow(pressure_map, cmap='jet', origin='upper', interpolation='nearest')
+    # Compute the weighted sum for the x and y coordinates
+    x_COP = np.sum(x_coords * pressure_map) / total_pressure
+    y_COP = np.sum(y_coords * pressure_map) / total_pressure
 
-# Add a colorbar to represent the pressure levels
-plt.colorbar(label='Pressure (units)')
+    # Print the computed center of pressure
+    print(f"Center of Pressure (x, y): ({x_COP}, {y_COP})")
 
-# Add a red dot to indicate the Center of Pressure (CoP)
-plt.scatter([x_COP], [y_COP], color='red', marker='o', label='Center of Pressure')
+    # Create a heatmap
+    plt.imshow(pressure_map, cmap='jet', origin='upper', interpolation='nearest')
 
-# Set axis labels
-plt.xlabel('Width (pixels)')
-plt.ylabel('Height (pixels)')
+    # Add a colorbar to represent the pressure levels
+    plt.colorbar(label='Pressure (units)')
 
-# Display the heatmap
-plt.title('Pressure Heatmap from Foot Pressure Image')
-plt.show()
+    # Add a red dot to indicate the Center of Pressure (CoP)
+    plt.scatter([x_COP], [y_COP], color='red', marker='o', label='Center of Pressure')
+
+    # Set axis labels
+    plt.xlabel('Width (pixels)')
+    plt.ylabel('Height (pixels)')
+
+    # Display the heatmap
+    plt.title('Pressure Heatmap from Foot Pressure Image')
+    plt.show()
