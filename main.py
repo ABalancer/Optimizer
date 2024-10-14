@@ -1,15 +1,5 @@
 import numpy as np
-from scipy.integrate import dblquad
 import matplotlib.pyplot as plt
-
-# Constants
-m_T = 80.0  # Total mass (kg)
-g = 9.81  # Gravitational acceleration (m/s^2)
-T = 5.0  # Time limit (s)
-w = 0.105  # Width of the foot (m)
-h = 0.25  # Height of the foot (m)
-x_l, y_l = 0.168, 0.24  # Left object's centre coordinates (m)
-x_r, y_r = 0.312, 0.24  # Right object's centre coordinates (m)
 
 
 def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitch_widths,
@@ -39,6 +29,7 @@ def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitc
 
 
 def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
+
     n_c = len(pitch_widths)  # Number of columns
     n_r = len(pitch_heights)  # Number of rows
 
@@ -73,7 +64,56 @@ def update_heatmap(pressure_results):
     return plt, heatmap, cbar
 
 
+def move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_matrix_shape):
+    mat_matrix = np.zeros((round(1000*mat_matrix_shape[0]), round(1000*mat_matrix_shape[1])))
+    foot_height, foot_width = left_foot_profile.shape
+
+    # Calculate top-left corner for small_matrix1
+    top_left_of_left_foot = (left_foot_centre[0] - foot_height // 2, left_foot_centre[1] - foot_width // 2)
+
+    mat_matrix[top_left_of_left_foot[0]:top_left_of_left_foot[0] + foot_height,
+               top_left_of_left_foot[1]:top_left_of_left_foot[1] + foot_width] = left_foot_profile
+
+    top_left_of_right_foot = (right_foot_centre[0] - foot_height // 2, right_foot_centre[1] - foot_width // 2)
+
+    mat_matrix[top_left_of_right_foot[0]:top_left_of_right_foot[0] + foot_height,
+               top_left_of_right_foot[1]:top_left_of_right_foot[1] + foot_width] = right_foot_profile
+
+    return mat_matrix
+
+
+def plot_heatmap(heatmap_matrix):
+    # Plot the heatmap
+    plt.figure(figsize=(6, 6))  # Set the figure size
+
+    # Plot the heatmap using imshow
+    plt.imshow(heatmap_matrix, cmap='viridis', origin='upper', interpolation='none')
+
+    # Add a colorbar to show the intensity of values
+    plt.colorbar()
+
+    # Add labels and title
+    plt.title('Heatmap of Large Matrix')
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+
+    # Show the plot
+    plt.show()
+
+
 if __name__ == "__main__":
+    # Load the array back from the .npy file
+    left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
+    right_foot_profile = np.flip(left_foot_profile, axis=1)
+
+    mat_size = (0.48, 0.48)  # in metres
+    left_foot_centre = (240, 168)
+    right_foot_centre = (240, 312)
+
+    pressure_map = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
+    plot_heatmap(pressure_map)
+
+    '''
     # Heatmap
     data = np.random.random((32, 32))
     fig, ax = plt.subplots()
@@ -101,3 +141,4 @@ if __name__ == "__main__":
         # update_heatmap(pressure_results)
 
     np.save("centre_of_pressure_results.npy", cop_values)
+    '''
