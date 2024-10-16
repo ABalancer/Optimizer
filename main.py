@@ -55,6 +55,29 @@ def bruteforcer():
     print("Todo")
 
 
+def sum_square_section(matrix, midpoint, row_length, col_length):
+    half_row_length = row_length // 2  # Half of the row length
+    half_col_length = col_length // 2  # Half of the col length
+
+    # Calculate the top-left corner of the square
+    row_start = midpoint[0] - half_row_length
+    col_start = midpoint[1] - half_col_length
+
+    # Calculate the row and column end positions (be careful with boundaries)
+    row_end = row_start + row_length
+    col_end = col_start + col_length
+
+    # Ensure the boundaries don't exceed the matrix dimensions
+    row_start = max(0, row_start)
+    col_start = max(0, col_start)
+    row_end = min(matrix.shape[0], row_end)
+    col_end = min(matrix.shape[1], col_end)
+
+    # Extract the sub matrix and sum its values
+    sub_matrix = matrix[row_start:row_end, col_start:col_end]
+    return np.sum(sub_matrix)
+
+
 def move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_matrix_shape):
     mat_matrix = np.zeros((round(1000*mat_matrix_shape[0]), round(1000*mat_matrix_shape[1])))
     foot_height, foot_width = left_foot_profile.shape
@@ -124,17 +147,25 @@ if __name__ == "__main__":
     x_cop, y_cop = high_res_centre_of_pressure(heatmap_matrix)
     print(x_cop, y_cop)
 
-    '''
-    # Heatmap
-    data = np.random.random((32, 32))
-    fig, ax = plt.subplots()
-    heatmap = ax.imshow(data, cmap='hot', interpolation='nearest')
-    # Add labels, title, colour bar
-    plt.title("Pressure Map")
-    plt.xlabel("x_j Index")
-    plt.ylabel("y_i Index")
-    cbar = plt.colorbar(heatmap)
+    resolution = (16, 16)
+    sensor_heights = np.array(resolution[0]*[0.015])
+    sensor_widths = np.array(resolution[1]*[0.015])
+    pitch_heights = np.array(resolution[0]*[0.015])
+    pitch_widths = np.array(resolution[1]*[0.015])
+    sensor_results_16 = np.zeros(resolution)
 
+    height_midpoint = sensor_heights[0]/2
+    width_midpoint = sensor_widths[0]/2
+    for i in range(1, resolution[0]):
+        for j in range(1, resolution[1]):
+            sensor_results_16[i-1][j-1] = sum_square_section(heatmap_matrix, (height_midpoint, width_midpoint),
+                                                             int(round(1000*sensor_widths[j])),
+                                                             int(round(1000*sensor_heights[i])))
+            width_midpoint += sensor_widths[j-1]/2 + pitch_widths[j] + sensor_widths[j]/2
+        height_midpoint += sensor_heights[i-1]/2 + pitch_heights[i] + sensor_heights[i]/2
+
+    print(sensor_results_16)
+    '''
     # Simulation Settings
     time_step = 0.1  # Seconds
 
