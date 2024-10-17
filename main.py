@@ -56,22 +56,25 @@ def bruteforcer():
 
 
 def sum_square_section(matrix, midpoint, row_length, col_length):
-    half_row_length = row_length // 2  # Half of the row length
-    half_col_length = col_length // 2  # Half of the col length
+    row_length *= 1000
+    col_length *= 1000
+
+    half_row_length = row_length / 2  # Half of the row length
+    half_col_length = col_length / 2  # Half of the col length
 
     # Calculate the top-left corner of the square
-    row_start = midpoint[0] - half_row_length
-    col_start = midpoint[1] - half_col_length
+    row_start = 1000 * midpoint[0] - half_row_length
+    col_start = 1000 * midpoint[1] - half_col_length
 
     # Calculate the row and column end positions (be careful with boundaries)
     row_end = row_start + row_length
     col_end = col_start + col_length
 
     # Ensure the boundaries don't exceed the matrix dimensions
-    row_start = max(0, row_start)
-    col_start = max(0, col_start)
-    row_end = min(matrix.shape[0], row_end)
-    col_end = min(matrix.shape[1], col_end)
+    row_start = int(max(0, row_start))
+    col_start = int(max(0, col_start))
+    row_end = int(min(matrix.shape[0], row_end))
+    col_end = int(min(matrix.shape[1], col_end))
 
     # Extract the sub matrix and sum its values
     sub_matrix = matrix[row_start:row_end, col_start:col_end]
@@ -148,23 +151,25 @@ if __name__ == "__main__":
     print(x_cop, y_cop)
 
     resolution = (16, 16)
-    sensor_heights = np.array(resolution[0]*[0.015])
-    sensor_widths = np.array(resolution[1]*[0.015])
-    pitch_heights = np.array(resolution[0]*[0.015])
-    pitch_widths = np.array(resolution[1]*[0.015])
+    sensor_heights = np.array(resolution[0]*[mat_size[0]/resolution[0]/2])
+    sensor_widths = np.array(resolution[1]*[mat_size[1]/resolution[1]/2])
+    pitch_heights = np.array(resolution[0]*[mat_size[0]/resolution[0]/2])
+    pitch_widths = np.array(resolution[1]*[mat_size[1]/resolution[1]/2])
     sensor_results_16 = np.zeros(resolution)
 
     height_midpoint = sensor_heights[0]/2
-    width_midpoint = sensor_widths[0]/2
-    for i in range(1, resolution[0]):
-        for j in range(1, resolution[1]):
-            sensor_results_16[i-1][j-1] = sum_square_section(heatmap_matrix, (height_midpoint, width_midpoint),
-                                                             int(round(1000*sensor_widths[j])),
-                                                             int(round(1000*sensor_heights[i])))
+    for i in range(0, resolution[0]):
+        width_midpoint = sensor_widths[0] / 2
+        for j in range(0, resolution[1]):
+            sensor_results_16[i][j] = sum_square_section(heatmap_matrix, (height_midpoint, width_midpoint),
+                                                         sensor_widths[j], sensor_heights[i])
             width_midpoint += sensor_widths[j-1]/2 + pitch_widths[j] + sensor_widths[j]/2
         height_midpoint += sensor_heights[i-1]/2 + pitch_heights[i] + sensor_heights[i]/2
 
-    print(sensor_results_16)
+    plot_heatmap(sensor_results_16)
+    low_res = high_res_centre_of_pressure(sensor_results_16)
+    print(480*low_res[0]/resolution[0], 480*low_res[1]/resolution[1])
+
     '''
     # Simulation Settings
     time_step = 0.1  # Seconds
