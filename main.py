@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import constants
 import matplotlib.pyplot as plt
 
 
@@ -150,15 +151,18 @@ def create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_width
     return low_res_pressure_map
 
 
+def rescale_mass(foot_profile, mass):
+    scale_factor = mass * constants.g / np.sum(foot_profile)
+    return foot_profile * scale_factor
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the pressure values to represent a realistic user weight.
     user_mass = 80
     gravity = 9.81
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
-    total_force = np.sum(left_foot_profile)
-    scale_factor = user_mass / 2 * gravity / total_force
-    left_foot_profile *= scale_factor
+    left_foot_profile = rescale_mass(left_foot_profile, user_mass/2)
     right_foot_profile = np.flip(left_foot_profile, axis=1)
 
     # create heatmap with both feet
