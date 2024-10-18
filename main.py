@@ -3,16 +3,15 @@ from scipy import constants
 import matplotlib.pyplot as plt
 
 
-def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitch_widths,
-                       conductor_heights, pitch_heights, pressure):
+def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths, pressure):
     # Initialize sums
     numerator_x = 0
     numerator_y = 0
     denominator = 0
 
     # Loop over all regions i (height) and j (width)
-    for i in range(number_of_rows):
-        for j in range(number_of_columns):
+    for i in range(conductor_heights.shape[0]):
+        for j in range(conductor_widths.shape[0]):
             # Compute x_j and y_i based on the provided formulas
             x_j = 0.5 * conductor_widths[j] + sum(conductor_widths[k] + pitch_widths[k] for k in range(j))
             y_i = 0.5 * conductor_heights[i] + sum(conductor_heights[k] + pitch_heights[k] for k in range(i))
@@ -46,8 +45,8 @@ def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths,
         conductor_centre_x = conductor_widths[0] / 2
         conductor_centre_y += conductor_heights[i] + pitch_heights[i]
 
-    x, y = centre_of_pressure(n_r, n_c, conductor_widths, pitch_widths,
-                              conductor_heights, pitch_heights, pressure_results)
+    x, y = centre_of_pressure_estimate(n_r, n_c, conductor_widths, pitch_widths,
+                                       conductor_heights, pitch_heights, pressure_results)
 
     return x, y, pressure_results
 
@@ -119,7 +118,7 @@ def plot_heatmap(heatmap_matrix):
     plt.show()
 
 
-def high_res_centre_of_pressure(heatmap_matrix):
+def centre_of_pressure(heatmap_matrix):
     # Dimensions of the image
     height, width = heatmap_matrix.shape
 
@@ -136,17 +135,17 @@ def high_res_centre_of_pressure(heatmap_matrix):
     return x, y
 
 
-def create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths):
-    low_res_pressure_map = np.zeros((sensor_heights.shape[0], sensor_widths.shape[0]))
+def create_low_res_mat(conductor_heights, sensor_widths, pitch_heights, pitch_widths):
+    low_res_pressure_map = np.zeros((conductor_heights.shape[0], sensor_widths.shape[0]))
 
-    height_midpoint = sensor_heights[0] / 2
+    height_midpoint = conductor_heights[0] / 2
     for i in range(0, resolution[0]):
         width_midpoint = sensor_widths[0] / 2
         for j in range(0, resolution[1]):
             low_res_pressure_map[i][j] = sum_square_section(heatmap_matrix, (height_midpoint, width_midpoint),
-                                                            sensor_widths[j], sensor_heights[i])
+                                                            sensor_widths[j], conductor_heights[i])
             width_midpoint += sensor_widths[j-1] / 2 + pitch_widths[j] + sensor_widths[j]/2
-        height_midpoint += sensor_heights[i-1] / 2 + pitch_heights[i] + sensor_heights[i]/2
+        height_midpoint += conductor_heights[i - 1] / 2 + pitch_heights[i] + conductor_heights[i] / 2
 
     return low_res_pressure_map
 
@@ -165,6 +164,16 @@ def rescale_mass(foot_profile, mass):
     return foot_profile * scale_factor
 
 
+def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map):
+    adc_resistance_map = np.zeros(force_map.shape)
+    for i in range(conductor_heights.shape[0]):
+        for j in range(conductor_widths.shape[0]):
+            area = conductor_heights[i] * conductor_widths[j]
+            adc_resistance_map[i][j] = R0*area/(R0 * k * force_map[i][j] + pow(area, 2))
+
+    return adc_resistance_map
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the pressure values to represent a realistic user weight.
@@ -181,8 +190,12 @@ if __name__ == "__main__":
     heatmap_matrix = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
     plot_heatmap(heatmap_matrix)
 
+    # Sensor parameters
+    R0 = 0.2325
+    k = 1.265535e-8
+
     # compute CoP
-    x_cop, y_cop = high_res_centre_of_pressure(heatmap_matrix)
+    x_cop, y_cop = centre_of_pressure(heatmap_matrix)
     print(x_cop, y_cop)
 
     resolution = (16, 16)
@@ -191,10 +204,13 @@ if __name__ == "__main__":
     pitch_heights = np.array(resolution[0]*[mat_size[0]/resolution[0]/2])
     pitch_widths = np.array(resolution[1]*[mat_size[1]/resolution[1]/2])
 
-    sensor_results_16 = create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
-    plot_heatmap(sensor_results_16)
+    sensor_pressures = create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
+    plot_heatmap(sensor_pressures)
     ratios = compute_sensing_ratios(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
-    print(np.sum(sensor_results_16 * ratios / gravity))
+    print(np.sum(sensor_pressures * ratios / gravity))
+
+    adc_map = convert_force_to_adc(R0, k, sensor_heights, sensor_widths, sensor_pressures)
+    print(adc_map)
 
     '''
     # Simulation Settings
