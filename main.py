@@ -3,31 +3,6 @@ from scipy import constants
 import matplotlib.pyplot as plt
 
 
-def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths, pressure):
-    # Initialize sums
-    numerator_x = 0
-    numerator_y = 0
-    denominator = 0
-
-    # Loop over all regions i (height) and j (width)
-    for i in range(conductor_heights.shape[0]):
-        for j in range(conductor_widths.shape[0]):
-            # Compute x_j and y_i based on the provided formulas
-            x_j = 0.5 * conductor_widths[j] + sum(conductor_widths[k] + pitch_widths[k] for k in range(j))
-            y_i = 0.5 * conductor_heights[i] + sum(conductor_heights[k] + pitch_heights[k] for k in range(i))
-
-            # Add to numerators and denominator
-            numerator_x += x_j * pressure[i][j]
-            numerator_y += y_i * pressure[i][j]
-            denominator += pressure[i][j]
-
-    # Compute centre of pressure
-    x_E = numerator_x / denominator if denominator != 0 else 0
-    y_E = numerator_y / denominator if denominator != 0 else 0
-
-    return x_E, y_E
-
-
 def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
 
     n_c = len(pitch_widths)  # Number of columns
@@ -135,6 +110,31 @@ def centre_of_pressure(heatmap_matrix):
     return x, y
 
 
+def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths, pressure):
+    # Initialize sums
+    numerator_x = 0
+    numerator_y = 0
+    denominator = np.float64(0)
+
+    # Loop over all regions i (height) and j (width)
+    for i in range(conductor_heights.shape[0]):
+        for j in range(conductor_widths.shape[0]):
+            # Compute x_j and y_i based on the provided formulas
+            x_j = 0.5 * conductor_widths[j] + sum(conductor_widths[k] + pitch_widths[k] for k in range(j))
+            y_i = 0.5 * conductor_heights[i] + sum(conductor_heights[k] + pitch_heights[k] for k in range(i))
+
+            # Add to numerators and denominator
+            numerator_x += x_j * pressure[i][j]
+            numerator_y += y_i * pressure[i][j]
+            denominator += pressure[i][j]
+
+    # Compute centre of pressure
+    x_E = numerator_x / denominator if denominator != 0 else 0
+    y_E = numerator_y / denominator if denominator != 0 else 0
+
+    return x_E, y_E
+
+
 def create_low_res_mat(conductor_heights, sensor_widths, pitch_heights, pitch_widths):
     low_res_pressure_map = np.zeros((conductor_heights.shape[0], sensor_widths.shape[0]))
 
@@ -213,10 +213,15 @@ if __name__ == "__main__":
     sensor_pressures = create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
     plot_heatmap(sensor_pressures)
     ratios = compute_sensing_ratios(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
-    print(np.sum(sensor_pressures * ratios / gravity))
 
     adc_map = convert_force_to_adc(R0, k, sensor_heights, sensor_widths, sensor_pressures)
-
+    x_cop_e, y_cop_e = centre_of_pressure_estimate(sensor_heights, sensor_widths, pitch_heights, pitch_widths, adc_map)
+    x_cop_e *= 1000
+    y_cop_e *= 1000
+    print(x_cop_e, y_cop_e)
+    x_e = 100*abs((x_cop - x_cop_e)/x_cop)
+    y_e = 100*abs((y_cop - y_cop_e)/y_cop)
+    print("%f%%, %f%%" % (x_e, y_e))
     '''
     # Simulation Settings
     time_step = 0.1  # Seconds
