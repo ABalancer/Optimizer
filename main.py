@@ -123,7 +123,7 @@ def high_res_centre_of_pressure(heatmap_matrix):
     height, width = heatmap_matrix.shape
 
     # Create coordinate grids for x and y
-    x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
+    x_coords, y_coords = np.meshgrid(np.arange(width) + 0.5, np.arange(height) + 0.5)
 
     # Compute the total pressure (sum of all pixel pressures)
     total_pressure = np.sum(heatmap_matrix)
@@ -134,6 +134,20 @@ def high_res_centre_of_pressure(heatmap_matrix):
 
     return x, y
 
+
+def create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths):
+    low_res_pressure_map = np.zeros((sensor_heights.shape[0], sensor_widths.shape[0]))
+
+    height_midpoint = sensor_heights[0] / 2
+    for i in range(0, resolution[0]):
+        width_midpoint = sensor_widths[0] / 2
+        for j in range(0, resolution[1]):
+            low_res_pressure_map[i][j] = sum_square_section(heatmap_matrix, (height_midpoint, width_midpoint),
+                                                            sensor_widths[j], sensor_heights[i])
+            width_midpoint += sensor_widths[j-1] / 2 + pitch_widths[j] + sensor_widths[j]/2
+        height_midpoint += sensor_heights[i-1] / 2 + pitch_heights[i] + sensor_heights[i]/2
+
+    return low_res_pressure_map
 
 if __name__ == "__main__":
     # Load the array back from the .npy file
@@ -155,20 +169,9 @@ if __name__ == "__main__":
     sensor_widths = np.array(resolution[1]*[mat_size[1]/resolution[1]/2])
     pitch_heights = np.array(resolution[0]*[mat_size[0]/resolution[0]/2])
     pitch_widths = np.array(resolution[1]*[mat_size[1]/resolution[1]/2])
-    sensor_results_16 = np.zeros(resolution)
 
-    height_midpoint = sensor_heights[0]/2
-    for i in range(0, resolution[0]):
-        width_midpoint = sensor_widths[0] / 2
-        for j in range(0, resolution[1]):
-            sensor_results_16[i][j] = sum_square_section(heatmap_matrix, (height_midpoint, width_midpoint),
-                                                         sensor_widths[j], sensor_heights[i])
-            width_midpoint += sensor_widths[j-1]/2 + pitch_widths[j] + sensor_widths[j]/2
-        height_midpoint += sensor_heights[i-1]/2 + pitch_heights[i] + sensor_heights[i]/2
-
+    sensor_results_16 = create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
     plot_heatmap(sensor_results_16)
-    low_res = high_res_centre_of_pressure(sensor_results_16)
-    print(480*low_res[0]/resolution[0], 480*low_res[1]/resolution[1])
 
     '''
     # Simulation Settings
