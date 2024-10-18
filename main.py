@@ -149,18 +149,26 @@ def create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_width
 
     return low_res_pressure_map
 
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
+    # Scale the pressure values to represent a realistic user weight.
+    user_mass = 80
+    gravity = 9.81
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
+    total_force = np.sum(left_foot_profile)
+    scale_factor = user_mass / 2 * gravity / total_force
+    left_foot_profile *= scale_factor
     right_foot_profile = np.flip(left_foot_profile, axis=1)
 
+    # create heatmap with both feet
     mat_size = (0.48, 0.48)  # in metres
     left_foot_centre = (240, 168)
     right_foot_centre = (240, 312)
-
     heatmap_matrix = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
     plot_heatmap(heatmap_matrix)
 
+    # compute CoP
     x_cop, y_cop = high_res_centre_of_pressure(heatmap_matrix)
     print(x_cop, y_cop)
 
@@ -172,6 +180,7 @@ if __name__ == "__main__":
 
     sensor_results_16 = create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
     plot_heatmap(sensor_results_16)
+    print(np.sum(sensor_results_16)*4/gravity)
 
     '''
     # Simulation Settings
