@@ -151,6 +151,15 @@ def create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_width
     return low_res_pressure_map
 
 
+def compute_sensing_ratios(sensor_heights, sensor_widths, pitch_heights, pitch_widths):
+    sensing_ratios = np.zeros((sensor_heights.shape[0], sensor_widths.shape[0]))
+    for i in range(0, sensor_heights.shape[0]):
+        for j in range(0, sensor_widths.shape[0]):
+            sensing_ratios[i][j] = ((sensor_heights[i] + pitch_heights[i]) * (sensor_widths[j] + pitch_widths[j])
+                                    / (sensor_heights[i]*sensor_widths[j]))
+    return sensing_ratios
+
+
 def rescale_mass(foot_profile, mass):
     scale_factor = mass * constants.g / np.sum(foot_profile)
     return foot_profile * scale_factor
@@ -184,7 +193,8 @@ if __name__ == "__main__":
 
     sensor_results_16 = create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
     plot_heatmap(sensor_results_16)
-    print(np.sum(sensor_results_16)*4/gravity)
+    ratios = compute_sensing_ratios(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
+    print(np.sum(sensor_results_16 * ratios / gravity))
 
     '''
     # Simulation Settings
