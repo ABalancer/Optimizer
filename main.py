@@ -165,13 +165,19 @@ def rescale_mass(foot_profile, mass):
 
 
 def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map):
-    adc_resistance_map = np.zeros(force_map.shape)
+    resolution = 4095
+    adc_map = np.zeros(force_map.shape, dtype=np.int16)
     for i in range(conductor_heights.shape[0]):
         for j in range(conductor_widths.shape[0]):
             area = conductor_heights[i] * conductor_widths[j]
-            adc_resistance_map[i][j] = R0*area/(R0 * k * force_map[i][j] + pow(area, 2))
+            base_resistance = R0 / area
+            divider_resistance = base_resistance / 5
+            sensor_resistance = R0 * area / (R0 * k * force_map[i][j] + pow(area, 2))
+            offset = np.int16(np.floor(resolution * divider_resistance / (base_resistance + divider_resistance)))
+            adc_map[i][j] = np.int16(np.floor(
+                resolution * divider_resistance/(sensor_resistance + divider_resistance))) - offset
 
-    return adc_resistance_map
+    return adc_map
 
 
 if __name__ == "__main__":
@@ -191,7 +197,7 @@ if __name__ == "__main__":
     plot_heatmap(heatmap_matrix)
 
     # Sensor parameters
-    R0 = 0.2325
+    R0 = 0.2325  # resistance per metre squared
     k = 1.265535e-8
 
     # compute CoP
@@ -210,7 +216,6 @@ if __name__ == "__main__":
     print(np.sum(sensor_pressures * ratios / gravity))
 
     adc_map = convert_force_to_adc(R0, k, sensor_heights, sensor_widths, sensor_pressures)
-    print(adc_map)
 
     '''
     # Simulation Settings
