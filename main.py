@@ -213,38 +213,36 @@ if __name__ == "__main__":
     mat_size = (0.48, 0.48)  # in metres
     left_foot_centre = (240, 168)
     right_foot_centre = (240, 312)
-    heatmap_matrix = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
     # plot_heatmap(force_map)
 
     # Sensor parameters
     R0 = 0.2325  # resistance per metre squared
     k = 1.265535e-8
 
+    # Simulation Settings
     resolution = (16, 16)
     sensor_heights = np.array(resolution[0] * [mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [mat_size[1] / resolution[1] / 2])
     pitch_heights = np.array(resolution[0] * [mat_size[0] / resolution[0] / 2])
     pitch_widths = np.array(resolution[1] * [mat_size[1] / resolution[1] / 2])
 
-    x_e, y_e = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths, heatmap_matrix)
+    average_x_e = 0
+    average_y_e = 0
 
-    print(x_e, y_e)
-    '''
-    # Simulation Settings
     time_step = 0.1  # Seconds
-
     time_steps = np.arange(0, 5 + time_step, time_step)
-    cop_values = np.zeros((len(time_steps), 3))
-    pitch_widths = np.array(128*[0.001875])
-    pitch_heights = np.array(128*[0.001875])
-    conductor_widths = np.array(128*[0.001875])
-    conductor_heights = np.array(128*[0.001875])
     for t in time_steps:
-        x, y, pressure_results = simulation_scenario(t, conductor_widths, conductor_heights,
-                                                     pitch_widths, pitch_heights)
-        cop_values[np.where(time_steps == t)[0]] = [t, x, y]
-        print("time = %f, x = %f, y = %f" % (t, x, y))
-        # update_heatmap(pressure_results)
+        left_foot_centre =
+        right_foot_centre =
+        heatmap_matrix = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
+        x_e, y_e = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
+                                              heatmap_matrix)
+        average_x_e += x_e
+        average_y_e += y_e
+    average_x_e /= len(time_steps)
+    average_y_e /= len(time_steps)
 
+    print(average_x_e, average_y_e)
+    '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
