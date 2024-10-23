@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import constants
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
@@ -92,6 +93,16 @@ def plot_heatmap(force_map):
     plt.show()
 
 
+# Function to update the heatmap
+def update_frame(frame, heatmap_line, heatmaps):
+    number_of_frames = np.shape(heatmaps)[0]
+    if frame > number_of_frames - 1:
+        heatmap_line.set_data(heatmaps[2 * number_of_frames - frame - 1])
+    else:
+        heatmap_line.set_data(heatmaps[frame])
+    return [heatmap_line]
+
+
 def centre_of_pressure(force_map):
     # Dimensions of the image
     height, width = force_map.shape
@@ -141,7 +152,7 @@ def create_low_res_mat(conductor_heights, sensor_widths, pitch_heights, pitch_wi
     for i in range(0, resolution[0]):
         width_midpoint = sensor_widths[0] / 2
         for j in range(0, resolution[1]):
-            low_res_pressure_map[i][j] = sum_square_section(heatmap_matrix, (height_midpoint, width_midpoint),
+            low_res_pressure_map[i][j] = sum_square_section(high_res_heatmap_matrix, (height_midpoint, width_midpoint),
                                                             sensor_widths[j], conductor_heights[i])
             width_midpoint += sensor_widths[j-1] / 2 + pitch_widths[j] + sensor_widths[j]/2
         height_midpoint += conductor_heights[i - 1] / 2 + pitch_heights[i] + conductor_heights[i] / 2
@@ -196,7 +207,7 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
     print("Real x: %3.2f, y: %3.2f, Estimate x: %3.2f, y: %3.2f, Error x: %2.3f%%, y: %2.3f%%" %
           (1000 * x_cop, 1000 * y_cop, 1000 * x_cop_e, 1000 * y_cop_e, x_e, y_e))
 
-    return x_e, y_e
+    return x_e, y_e, adc_map
 
 
 if __name__ == "__main__":
@@ -231,21 +242,36 @@ if __name__ == "__main__":
 
     time_step = 0.1  # Seconds
     time_steps = np.arange(0, total_time + time_step, time_step)
+    number_of_time_stamps = len(time_steps)
+    heatmaps = np.zeros((number_of_time_stamps, sensor_heights.shape[0], sensor_widths.shape[0]))
+
     for t in time_steps:
         left_foot_mass = user_mass / total_time * t
         right_foot_mass = user_mass - left_foot_mass
         temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
         temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
-        heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
-                                   temp_left_foot_profile, temp_right_foot_profile, mat_size)
-        x_e, y_e = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-                                              heatmap_matrix)
+        high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
+                                            temp_left_foot_profile, temp_right_foot_profile, mat_size)
+        x_e, y_e, adc_map = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
+                                                       high_res_heatmap_matrix)
         average_x_e += x_e
         average_y_e += y_e
-    average_x_e /= len(time_steps)
-    average_y_e /= len(time_steps)
+        heatmaps[np.where(time_steps == t)] = adc_map
+    average_x_e /= number_of_time_stamps
+    average_y_e /= number_of_time_stamps
 
     print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
+
+    # Create real-time plot
+    # Set up the figure and axis
+    fig, ax = plt.subplots()
+    heatmap_line = ax.imshow(heatmaps[0], cmap='viridis', interpolation='none')
+    cbar = plt.colorbar(heatmap_line)
+
+    ani = animation.FuncAnimation(fig, update_frame, frames=2 * number_of_time_stamps, interval=100, blit=True,
+                                  fargs=(heatmap_line, heatmaps))
+
+    plt.show()
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
