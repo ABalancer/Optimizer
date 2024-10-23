@@ -186,7 +186,6 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
     y_cop /= 1000
     sensor_pressures = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths)
     # plot_heatmap(sensor_pressures)
-    ratios = compute_sensing_ratios(conductor_heights, conductor_widths, pitch_heights, pitch_widths)
     # compute estimated CoP
     adc_map = convert_force_to_adc(R0, k, conductor_heights, conductor_widths, sensor_pressures)
     x_cop_e, y_cop_e = centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
@@ -203,6 +202,7 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
 if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
+    total_time = 5
     user_mass = 80
     gravity = 9.81
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
@@ -230,11 +230,14 @@ if __name__ == "__main__":
     average_y_e = 0
 
     time_step = 0.1  # Seconds
-    time_steps = np.arange(0, 5 + time_step, time_step)
+    time_steps = np.arange(0, total_time + time_step, time_step)
     for t in time_steps:
-        left_foot_centre =
-        right_foot_centre =
-        heatmap_matrix = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
+        left_foot_mass = user_mass / total_time * t
+        right_foot_mass = user_mass - left_foot_mass
+        temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
+        temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
+        heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
+                                   temp_left_foot_profile, temp_right_foot_profile, mat_size)
         x_e, y_e = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
                                               heatmap_matrix)
         average_x_e += x_e
@@ -242,7 +245,7 @@ if __name__ == "__main__":
     average_x_e /= len(time_steps)
     average_y_e /= len(time_steps)
 
-    print(average_x_e, average_y_e)
+    print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
