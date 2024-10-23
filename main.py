@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 
 def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
-
     n_c = len(pitch_widths)  # Number of columns
     n_r = len(pitch_heights)  # Number of rows
 
@@ -74,12 +73,12 @@ def move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot
     return mat_matrix
 
 
-def plot_heatmap(heatmap_matrix):
+def plot_heatmap(force_map):
     # Plot the heatmap
     plt.figure(figsize=(6, 6))  # Set the figure size
 
     # Plot the heatmap using imshow
-    plt.imshow(heatmap_matrix, cmap='viridis', origin='upper', interpolation='none')
+    plt.imshow(force_map, cmap='viridis', origin='upper', interpolation='none')
 
     # Add a colorbar to show the intensity of values
     plt.colorbar()
@@ -93,24 +92,24 @@ def plot_heatmap(heatmap_matrix):
     plt.show()
 
 
-def centre_of_pressure(heatmap_matrix):
+def centre_of_pressure(force_map):
     # Dimensions of the image
-    height, width = heatmap_matrix.shape
+    height, width = force_map.shape
 
     # Create coordinate grids for x and y
     x_coords, y_coords = np.meshgrid(np.arange(width) + 0.5, np.arange(height) + 0.5)
 
-    # Compute the total pressure (sum of all pixel pressures)
-    total_pressure = np.sum(heatmap_matrix)
+    # Compute the total force_map (sum of all pixel pressures)
+    total_pressure = np.sum(force_map)
 
     # Compute the weighted sum for the x and y coordinates
-    x = np.sum(x_coords * heatmap_matrix) / total_pressure
-    y = np.sum(y_coords * heatmap_matrix) / total_pressure
+    x = np.sum(x_coords * force_map) / total_pressure
+    y = np.sum(y_coords * force_map) / total_pressure
 
     return x, y
 
 
-def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths, pressure):
+def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map):
     # Initialize sums
     numerator_x = 0
     numerator_y = 0
@@ -124,11 +123,11 @@ def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heigh
             y_i = 0.5 * conductor_heights[i] + sum(conductor_heights[k] + pitch_heights[k] for k in range(i))
 
             # Add to numerators and denominator
-            numerator_x += x_j * pressure[i][j]
-            numerator_y += y_i * pressure[i][j]
-            denominator += pressure[i][j]
+            numerator_x += x_j * force_map[i][j]
+            numerator_y += y_i * force_map[i][j]
+            denominator += force_map[i][j]
 
-    # Compute centre of pressure
+    # Compute centre of force_map
     x_E = numerator_x / denominator if denominator != 0 else 0
     y_E = numerator_y / denominator if denominator != 0 else 0
 
@@ -180,9 +179,30 @@ def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map):
     return adc_map
 
 
+def compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map):
+    # compute real CoP
+    x_cop, y_cop = centre_of_pressure(force_map)
+    x_cop /= 1000
+    y_cop /= 1000
+    sensor_pressures = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths)
+    # plot_heatmap(sensor_pressures)
+    ratios = compute_sensing_ratios(conductor_heights, conductor_widths, pitch_heights, pitch_widths)
+    # compute estimated CoP
+    adc_map = convert_force_to_adc(R0, k, conductor_heights, conductor_widths, sensor_pressures)
+    x_cop_e, y_cop_e = centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                                                   adc_map)
+
+    x_e = 100 * abs((x_cop - x_cop_e) / x_cop)
+    y_e = 100 * abs((y_cop - y_cop_e) / y_cop)
+    print("Real x: %3.2f, y: %3.2f, Estimate x: %3.2f, y: %3.2f, Error x: %2.3f%%, y: %2.3f%%" %
+          (1000 * x_cop, 1000 * y_cop, 1000 * x_cop_e, 1000 * y_cop_e, x_e, y_e))
+
+    return x_e, y_e
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
-    # Scale the pressure values to represent a realistic user weight.
+    # Scale the force_map values to represent a realistic user weight.
     user_mass = 80
     gravity = 9.81
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
@@ -194,34 +214,21 @@ if __name__ == "__main__":
     left_foot_centre = (240, 168)
     right_foot_centre = (240, 312)
     heatmap_matrix = move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_size)
-    plot_heatmap(heatmap_matrix)
+    # plot_heatmap(force_map)
 
     # Sensor parameters
     R0 = 0.2325  # resistance per metre squared
     k = 1.265535e-8
 
-    # compute CoP
-    x_cop, y_cop = centre_of_pressure(heatmap_matrix)
-    print(x_cop, y_cop)
-
     resolution = (16, 16)
-    sensor_heights = np.array(resolution[0]*[mat_size[0]/resolution[0]/2])
-    sensor_widths = np.array(resolution[1]*[mat_size[1]/resolution[1]/2])
-    pitch_heights = np.array(resolution[0]*[mat_size[0]/resolution[0]/2])
-    pitch_widths = np.array(resolution[1]*[mat_size[1]/resolution[1]/2])
+    sensor_heights = np.array(resolution[0] * [mat_size[0] / resolution[0] / 2])
+    sensor_widths = np.array(resolution[1] * [mat_size[1] / resolution[1] / 2])
+    pitch_heights = np.array(resolution[0] * [mat_size[0] / resolution[0] / 2])
+    pitch_widths = np.array(resolution[1] * [mat_size[1] / resolution[1] / 2])
 
-    sensor_pressures = create_low_res_mat(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
-    plot_heatmap(sensor_pressures)
-    ratios = compute_sensing_ratios(sensor_heights, sensor_widths, pitch_heights, pitch_widths)
+    x_e, y_e = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths, heatmap_matrix)
 
-    adc_map = convert_force_to_adc(R0, k, sensor_heights, sensor_widths, sensor_pressures)
-    x_cop_e, y_cop_e = centre_of_pressure_estimate(sensor_heights, sensor_widths, pitch_heights, pitch_widths, adc_map)
-    x_cop_e *= 1000
-    y_cop_e *= 1000
-    print(x_cop_e, y_cop_e)
-    x_e = 100*abs((x_cop - x_cop_e)/x_cop)
-    y_e = 100*abs((y_cop - y_cop_e)/y_cop)
-    print("%f%%, %f%%" % (x_e, y_e))
+    print(x_e, y_e)
     '''
     # Simulation Settings
     time_step = 0.1  # Seconds

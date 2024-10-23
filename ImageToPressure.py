@@ -4,7 +4,7 @@ from PIL import Image
 from scipy.interpolate import interp1d
 from matplotlib.colors import hex2color
 
-# Define the known colors and pressure values
+# Define the known colors and force_map values
 color_map = {
     '#000000': 0,
     '#333333': 10,
@@ -24,13 +24,13 @@ g_interp = interp1d(color_rgb[:, 1], pressures, bounds_error=False, fill_value="
 b_interp = interp1d(color_rgb[:, 2], pressures, bounds_error=False, fill_value="extrapolate")
 
 
-# Function to map an RGB color to a pressure value using interpolation
+# Function to map an RGB color to a force_map value using interpolation
 def get_pressure_from_color(color):
     r, g, b = color
     pressure_r = r_interp(r)
     pressure_g = g_interp(g)
     pressure_b = b_interp(b)
-    # Take the average of interpolated pressure values across R, G, and B channels
+    # Take the average of interpolated force_map values across R, G, and B channels
     return (pressure_r + pressure_g + pressure_b) / 3.0
 
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # Convert the image to a numpy array of RGB values
     image_data = np.array(image)
 
-    # Sample the image and get pressure values
+    # Sample the image and get force_map values
     height, width, _ = image_data.shape
     pressure_map = np.zeros((height, width))
 
@@ -53,11 +53,11 @@ if __name__ == "__main__":
             pressure = get_pressure_from_color(rgb)
             pressure_map[i, j] = pressure
 
-    # Optionally, you can save the pressure map or analyze it further
+    # Optionally, you can save the force_map map or analyze it further
     # Example: Save as a CSV file
     np.savetxt("pressure_map.csv", pressure_map, delimiter=",")
 
-    # Assuming `pressure_map` is the 2D array of pressure values obtained from the previous code
+    # Assuming `pressure_map` is the 2D array of force_map values obtained from the previous code
 
     # Dimensions of the image
     height, width = pressure_map.shape
@@ -65,20 +65,20 @@ if __name__ == "__main__":
     # Create coordinate grids for x and y
     x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
 
-    # Compute the total pressure (sum of all pixel pressures)
+    # Compute the total force_map (sum of all pixel pressures)
     total_pressure = np.sum(pressure_map)
 
     # Compute the weighted sum for the x and y coordinates
     x_COP = np.sum(x_coords * pressure_map) / total_pressure
     y_COP = np.sum(y_coords * pressure_map) / total_pressure
 
-    # Print the computed center of pressure
+    # Print the computed center of force_map
     print(f"Center of Pressure (x, y): ({x_COP}, {y_COP})")
 
     # Create a heatmap
     plt.imshow(pressure_map, cmap='jet', origin='upper', interpolation='nearest')
 
-    # Add a colorbar to represent the pressure levels
+    # Add a colorbar to represent the force_map levels
     plt.colorbar(label='Pressure (units)')
 
     # Add a red dot to indicate the Center of Pressure (CoP)

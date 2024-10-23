@@ -62,7 +62,7 @@ def centre_of_pressure(number_of_rows, number_of_columns, conductor_widths, pitc
             numerator_y += y_i * pressure[i][j]
             denominator += pressure[i][j]
 
-    # Compute centre of pressure
+    # Compute centre of force_map
     x_E = numerator_x / denominator if denominator != 0 else 0
     y_E = numerator_y / denominator if denominator != 0 else 0
 
