@@ -2,6 +2,7 @@ import numpy as np
 from scipy import constants
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from scipy.ndimage import zoom
 
 
 def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
@@ -57,7 +58,7 @@ def sum_square_section(matrix, midpoint, row_length, col_length):
 
 
 def move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot_profile, mat_matrix_shape):
-    mat_matrix = np.zeros((round(1000*mat_matrix_shape[0]), round(1000*mat_matrix_shape[1])))
+    mat_matrix = np.zeros((round(mat_matrix_shape[0]), round(mat_matrix_shape[1])))
     foot_height, foot_width = left_foot_profile.shape
 
     # Calculate top-left corner for small_matrix1
@@ -152,7 +153,8 @@ def create_low_res_mat(conductor_heights, sensor_widths, pitch_heights, pitch_wi
     for i in range(0, resolution[0]):
         width_midpoint = sensor_widths[0] / 2
         for j in range(0, resolution[1]):
-            low_res_pressure_map[i][j] = sum_square_section(high_res_heatmap_matrix, (height_midpoint, width_midpoint),
+            low_res_pressure_map[i][j] = sum_square_section(high_res_heatmap_matrix,
+                                                            (height_midpoint, width_midpoint),
                                                             sensor_widths[j], conductor_heights[i])
             width_midpoint += sensor_widths[j-1] / 2 + pitch_widths[j] + sensor_widths[j]/2
         height_midpoint += conductor_heights[i - 1] / 2 + pitch_heights[i] + conductor_heights[i] / 2
@@ -216,26 +218,34 @@ if __name__ == "__main__":
     total_time = 5
     user_mass = 80
     gravity = 9.81
-    left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
-    left_foot_profile = rescale_mass(left_foot_profile, user_mass/2)
-    right_foot_profile = np.flip(left_foot_profile, axis=1)
 
     # create heatmap with both feet
+    high_res_resolution = (512, 512)
     mat_size = (0.48, 0.48)  # in metres
-    left_foot_centre = (240, 168)
-    right_foot_centre = (240, 312)
-    # plot_heatmap(force_map)
+    left_foot_centre = (0.24, 0.168)  # in metres
+    right_foot_centre = (0.24, 0.312)  # in metres
+
+    scale_factor = high_res_resolution[0] / mat_size[0] / 1000
+    left_foot_centre = (round(left_foot_centre[0] * scale_factor * 1000),
+                        round(left_foot_centre[1] * scale_factor * 1000))
+    right_foot_centre = (round(right_foot_centre[0] * scale_factor * 1000),
+                         round(right_foot_centre[1] * scale_factor * 1000))
+
+    left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
+    left_foot_profile = zoom(left_foot_profile, zoom=(scale_factor, scale_factor))
+    left_foot_profile = rescale_mass(left_foot_profile, user_mass/2)
+    right_foot_profile = np.flip(left_foot_profile, axis=1)
 
     # Sensor parameters
     R0 = 0.2325  # resistance per metre squared
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (16, 16)
-    sensor_heights = np.array(resolution[0] * [mat_size[0] / resolution[0] / 2])
-    sensor_widths = np.array(resolution[1] * [mat_size[1] / resolution[1] / 2])
-    pitch_heights = np.array(resolution[0] * [mat_size[0] / resolution[0] / 2])
-    pitch_widths = np.array(resolution[1] * [mat_size[1] / resolution[1] / 2])
+    resolution = (32, 32)
+    sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
+    sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
+    pitch_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
+    pitch_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
 
     average_x_e = 0
     average_y_e = 0
@@ -251,7 +261,7 @@ if __name__ == "__main__":
         temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
         temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
         high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
-                                            temp_left_foot_profile, temp_right_foot_profile, mat_size)
+                                            temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
         x_e, y_e, adc_map = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
                                                        high_res_heatmap_matrix)
         average_x_e += x_e
