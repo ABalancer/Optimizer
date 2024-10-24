@@ -156,7 +156,7 @@ def create_low_res_mat(conductor_heights, sensor_widths, pitch_heights, pitch_wi
             low_res_pressure_map[i][j] = sum_square_section(high_res_heatmap_matrix,
                                                             (height_midpoint, width_midpoint),
                                                             sensor_widths[j], conductor_heights[i])
-            width_midpoint += sensor_widths[j-1] / 2 + pitch_widths[j] + sensor_widths[j]/2
+            width_midpoint += sensor_widths[j-1] / 2 + pitch_widths[j] + sensor_widths[j] / 2
         height_midpoint += conductor_heights[i - 1] / 2 + pitch_heights[i] + conductor_heights[i] / 2
 
     return low_res_pressure_map
@@ -192,7 +192,7 @@ def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map):
     return adc_map
 
 
-def compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map):
+def compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map, piezo=True):
     # compute real CoP
     x_cop, y_cop = centre_of_pressure(force_map)
     x_cop /= 1000
@@ -200,7 +200,10 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
     sensor_pressures = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths)
     # plot_heatmap(sensor_pressures)
     # compute estimated CoP
-    adc_map = convert_force_to_adc(R0, k, conductor_heights, conductor_widths, sensor_pressures)
+    if piezo:
+        adc_map = convert_force_to_adc(R0, k, conductor_heights, conductor_widths, sensor_pressures)
+    else:
+        adc_map = sensor_pressures
     x_cop_e, y_cop_e = centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
                                                    adc_map)
 
@@ -233,7 +236,7 @@ if __name__ == "__main__":
 
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
     left_foot_profile = zoom(left_foot_profile, zoom=(scale_factor, scale_factor))
-    left_foot_profile = rescale_mass(left_foot_profile, user_mass/2)
+    left_foot_profile = rescale_mass(left_foot_profile, user_mass / 2)
     right_foot_profile = np.flip(left_foot_profile, axis=1)
 
     # Sensor parameters
@@ -241,7 +244,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (32, 32)
+    resolution = (16, 16)
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
     pitch_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
@@ -263,7 +266,7 @@ if __name__ == "__main__":
         high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
         x_e, y_e, adc_map = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-                                                       high_res_heatmap_matrix)
+                                                       high_res_heatmap_matrix, piezo=False)
         average_x_e += x_e
         average_y_e += y_e
         heatmaps[np.where(time_steps == t)] = adc_map
