@@ -146,7 +146,7 @@ def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heigh
     return x_E, y_E
 
 
-def create_low_res_mat(conductor_heights, sensor_widths, pitch_heights, pitch_widths):
+def create_low_res_mat(conductor_heights, sensor_widths, pitch_heights, pitch_widths, high_res_heatmap_matrix):
     low_res_pressure_map = np.zeros((conductor_heights.shape[0], sensor_widths.shape[0]))
 
     height_midpoint = conductor_heights[0] / 2
@@ -197,7 +197,7 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
     x_cop, y_cop = centre_of_pressure(force_map)
     x_cop /= 1000
     y_cop /= 1000
-    sensor_pressures = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths)
+    sensor_pressures = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map)
     # plot_heatmap(sensor_pressures)
     # compute estimated CoP
     if piezo:
@@ -213,6 +213,35 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
           (1000 * x_cop, 1000 * y_cop, 1000 * x_cop_e, 1000 * y_cop_e, x_e, y_e))
 
     return x_e, y_e, adc_map
+
+
+def run_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                              user_mass, left_foot_profile, right_foot_profile, piezo=False):
+    average_x_e = 0
+    average_y_e = 0
+
+    time_step = 0.1  # Seconds
+    time_steps = np.arange(0, total_time + time_step, time_step)
+    number_of_time_stamps = len(time_steps)
+    heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
+
+    for t in time_steps:
+        left_foot_mass = user_mass / total_time * t
+        right_foot_mass = user_mass - left_foot_mass
+        temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
+        temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
+        high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
+                                            temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
+        x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                                                       high_res_heatmap_matrix, piezo)
+        average_x_e += x_e
+        average_y_e += y_e
+        heatmaps[np.where(time_steps == t)] = adc_map
+    average_x_e /= number_of_time_stamps
+    average_y_e /= number_of_time_stamps
+
+    print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
+    return average_x_e, average_y_e, heatmaps
 
 
 if __name__ == "__main__":
@@ -250,30 +279,8 @@ if __name__ == "__main__":
     pitch_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     pitch_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
 
-    average_x_e = 0
-    average_y_e = 0
-
-    time_step = 0.1  # Seconds
-    time_steps = np.arange(0, total_time + time_step, time_step)
-    number_of_time_stamps = len(time_steps)
-    heatmaps = np.zeros((number_of_time_stamps, sensor_heights.shape[0], sensor_widths.shape[0]))
-
-    for t in time_steps:
-        left_foot_mass = user_mass / total_time * t
-        right_foot_mass = user_mass - left_foot_mass
-        temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
-        temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
-        high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
-                                            temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
-        x_e, y_e, adc_map = compute_error_for_instance(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-                                                       high_res_heatmap_matrix, piezo=False)
-        average_x_e += x_e
-        average_y_e += y_e
-        heatmaps[np.where(time_steps == t)] = adc_map
-    average_x_e /= number_of_time_stamps
-    average_y_e /= number_of_time_stamps
-
-    print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
+    x, y, heatmaps = run_weight_shift_scenario(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
+                                               user_mass, left_foot_profile, right_foot_profile)
 
     # Create real-time plot
     # Set up the figure and axis
@@ -281,7 +288,7 @@ if __name__ == "__main__":
     heatmap_line = ax.imshow(heatmaps[0], cmap='viridis', interpolation='none')
     cbar = plt.colorbar(heatmap_line)
 
-    ani = animation.FuncAnimation(fig, update_frame, frames=2 * number_of_time_stamps, interval=100, blit=True,
+    ani = animation.FuncAnimation(fig, update_frame, frames=2 * np.shape(heatmaps)[0], interval=100, blit=True,
                                   fargs=(heatmap_line, heatmaps))
 
     plt.show()
