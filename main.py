@@ -241,7 +241,7 @@ def run_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
 
-    print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
+    # print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
     return average_x_e, average_y_e, heatmaps
 
 
@@ -288,15 +288,35 @@ if __name__ == "__main__":
 
     # Simulation Settings
     resolution = (4, 4)
+
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
     pitch_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     pitch_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
 
-    x, y, heatmaps = run_weight_shift_scenario(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-                                               user_mass, left_foot_profile, right_foot_profile)
+    print(sensor_heights, pitch_heights)
+    # Create ranges for each width and height value, stepping by a quarter pitch width
+    step_size = 4
+    width_ranges = [np.arange(c_w, c_w + p_w, p_w / step_size) for c_w, p_w in zip(sensor_widths, pitch_widths)]
+    height_ranges = [np.arange(c_h, c_h + p_h, p_h / step_size) for c_h, p_h in zip(sensor_heights, pitch_heights)]
 
-    create_animated_plot(heatmaps)
+    total_iterations = pow(step_size, np.shape(sensor_heights)[0]) * pow(step_size, np.shape(sensor_widths)[0])
+    errors = np.zeros((total_iterations, 2), dtype=np.float64)
+    indexes = np.zeros((total_iterations, 2), dtype=np.int32)
+    iteration_number, i, j = 0, 0, 0
+    for pitch_height_combinations in itertools.product(*height_ranges):
+        for pitch_width_combinations in itertools.product(*width_ranges):
+            indexes[iteration_number][0] = i
+            indexes[iteration_number][1] = j
+            print(indexes[iteration_number])
+            # print("Widths:", pitch_width_combinations, ". Heights:", pitch_height_combinations)
+            #x, y, heatmaps = run_weight_shift_scenario(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
+            #                                           user_mass, left_foot_profile, right_foot_profile)
+            j += 1
+            iteration_number += 1
+        i += 1
+        j = 0
+    # create_animated_plot(heatmaps)
 
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
