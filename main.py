@@ -2,6 +2,7 @@ import numpy as np
 from scipy import constants
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import itertools
 from scipy.ndimage import zoom
 
 
@@ -244,6 +245,19 @@ def run_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights
     return average_x_e, average_y_e, heatmaps
 
 
+def create_animated_plot(heatmaps):
+    # Create real-time plot
+    # Set up the figure and axis
+    fig, ax = plt.subplots()
+    heatmap_line = ax.imshow(heatmaps[0], cmap='viridis', interpolation='none')
+    cbar = plt.colorbar(heatmap_line)
+
+    ani = animation.FuncAnimation(fig, update_frame, frames=2 * np.shape(heatmaps)[0], interval=100, blit=True,
+                                  fargs=(heatmap_line, heatmaps))
+
+    plt.show()
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
@@ -273,7 +287,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (16, 16)
+    resolution = (4, 4)
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
     pitch_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
@@ -282,16 +296,8 @@ if __name__ == "__main__":
     x, y, heatmaps = run_weight_shift_scenario(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
                                                user_mass, left_foot_profile, right_foot_profile)
 
-    # Create real-time plot
-    # Set up the figure and axis
-    fig, ax = plt.subplots()
-    heatmap_line = ax.imshow(heatmaps[0], cmap='viridis', interpolation='none')
-    cbar = plt.colorbar(heatmap_line)
+    create_animated_plot(heatmaps)
 
-    ani = animation.FuncAnimation(fig, update_frame, frames=2 * np.shape(heatmaps)[0], interval=100, blit=True,
-                                  fargs=(heatmap_line, heatmaps))
-
-    plt.show()
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
