@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import constants
+import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.animation as animation
@@ -237,7 +238,7 @@ def create_animated_plot(heatmaps):
     plt.show()
 
 
-def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_width, matrix_height):
+def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_height, matrix_width):
     fig, ax = plt.subplots(figsize=(6, 6))
 
     # Draw the matrix boundary
@@ -329,6 +330,7 @@ if __name__ == "__main__":
     # Iterate over every combination of possible track positions
     valid_combinations = []
     count = 0
+
     for x_positions in itertools.combinations(positions_x, resolution[1]):
         for y_positions in itertools.combinations(positions_y, resolution[0]):
             # Calculate total width and height of the arrangement
@@ -371,7 +373,8 @@ if __name__ == "__main__":
     print(min(layout_errors))
     # create_animated_plot(heatmaps)
     '''
-    plot_track_layout(sensor_heights, sensor_widths, valid_combinations[1], valid_combinations[1], valid_combinations[0])
+    plot_track_layout(sensor_heights, sensor_widths, valid_combinations[1], valid_combinations[0],
+                      rescaled_mat_size[1], rescaled_mat_size[0])
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
