@@ -1,31 +1,10 @@
 import numpy as np
 from scipy import constants
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import matplotlib.animation as animation
 import itertools
 from scipy.ndimage import zoom
-
-
-def simulation_scenario(time, conductor_widths, conductor_heights, pitch_widths, pitch_heights):
-    n_c = len(pitch_widths)  # Number of columns
-    n_r = len(pitch_heights)  # Number of rows
-
-    pressure_results = np.zeros((n_r, n_c))
-    conductor_centre_x, conductor_centre_y = conductor_widths[0] / 2, conductor_heights[0] / 2
-
-    for i in range(0, n_r):
-        for j in range(0, n_c):
-            # Calculate the spatial integral
-            pressure_results[i][j] = spatial_integral(time, conductor_centre_x, conductor_centre_y,
-                                                      conductor_widths[j], conductor_heights[i])
-            conductor_centre_x += conductor_widths[j] + pitch_widths[j]
-        conductor_centre_x = conductor_widths[0] / 2
-        conductor_centre_y += conductor_heights[i] + pitch_heights[i]
-
-    x, y = centre_of_pressure_estimate(n_r, n_c, conductor_widths, pitch_widths,
-                                       conductor_heights, pitch_heights, pressure_results)
-
-    return x, y, pressure_results
 
 
 def bruteforcer():
@@ -258,6 +237,45 @@ def create_animated_plot(heatmaps):
     plt.show()
 
 
+def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_width, matrix_height):
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    # Draw the matrix boundary
+    matrix_rect = patches.Rectangle((0, 0), matrix_width, matrix_height, linewidth=1, edgecolor='black',
+                                    facecolor='none')
+    ax.add_patch(matrix_rect)
+
+    # Draw each track as a rectangle centered on x_positions and y_positions
+    for x in x_positions:
+        for y in y_positions:
+            # Calculate the bottom-left corner of each track
+            track_x = x - track_width / 2
+            track_y = y - track_width / 2
+            track_rect = patches.Rectangle((track_x, track_y), track_width, track_width,
+                                           linewidth=1, edgecolor='blue',
+                                           facecolor='lightblue')
+            ax.add_patch(track_rect)
+    '''
+    # Display pitch widths and gaps on the plot
+    plt.text(0, -0.05, f'Start gap X: {start_gap_x:.3f}', ha='left')
+    plt.text(matrix_width, -0.05, f'End gap X: {end_gap_x:.3f}', ha='right')
+    plt.text(-0.05, 0, f'Start gap Y: {start_gap_y:.3f}', va='bottom', rotation=90)
+    plt.text(-0.05, matrix_height, f'End gap Y: {end_gap_y:.3f}', va='top', rotation=90)
+    '''
+
+    # Set axis limits and labels
+    ax.set_xlim(-0.1, matrix_width + 0.1)
+    ax.set_ylim(-0.1, matrix_height + 0.1)
+    ax.set_aspect('equal')
+    ax.set_title("Track Layout in Matrix")
+    plt.xlabel("Width (m)")
+    plt.ylabel("Height (m)")
+
+    # Display grid for clarity
+    ax.grid(True)
+    plt.show()
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
@@ -304,41 +322,44 @@ if __name__ == "__main__":
     x_max = rescaled_mat_size[1] - track_width / 2
     y_min = track_height / 2
     y_max = rescaled_mat_size[0] - track_height / 2
-    print(x_min, x_max, y_min, y_max)
 
     # Generate possible discrete locations along an axis
-    positions_y = np.arange(y_min, y_max + track_height, track_height + minimum_pitch_height)
-    positions_x = np.arange(x_min, x_max + track_width, track_width + minimum_pitch_width)
+    positions_y = np.arange(y_min, y_max + minimum_pitch_height, minimum_pitch_height)
+    positions_x = np.arange(x_min, x_max + minimum_pitch_width, minimum_pitch_width)
 
     # Iterate over every combination of possible track positions
     valid_combinations = []
+    count = 0
     for x_positions in itertools.combinations(positions_x, resolution[1]):
         for y_positions in itertools.combinations(positions_y, resolution[0]):
             # Calculate total width and height of the arrangement
-            total_width = (resolution[1] * track_width) + ((resolution[1] - 1) * minimum_pitch_width)
-            total_height = (resolution[0] * track_width) + ((resolution[0] - 1) * minimum_pitch_height)
+            # Calculate pitch widths as differences between consecutive positions
+            total_width = 0
+            total_height = 0
+            pitch_widths = []
+            pitch_heights = []
+            pitch_widths.append(x_positions[0] - track_width / 2)
+            pitch_heights.append(y_positions[0] - track_height / 2)
+            if all(x_positions[i] <= x_positions[i + 1] for i in range(len(x_positions) - 1)) and \
+                    all(y_positions[i] <= y_positions[i + 1] for i in range(len(y_positions) - 1)):
+                for j in range(resolution[1] - 1):
+                    pitch_widths.append(x_positions[j + 1] - x_positions[j] - track_width)
+                for i in range(resolution[0] - 1):
+                    pitch_heights.append(y_positions[i + 1] - y_positions[i] - track_height)
 
-            # Check conditions
-            if total_width <= rescaled_mat_size[1] and total_height <= rescaled_mat_size[0]:
-                if all(x_positions[i] <= x_positions[i + 1] for i in range(len(x_positions) - 1)) and \
-                        all(y_positions[i] <= y_positions[i + 1] for i in range(len(y_positions) - 1)):
-
-                    # print(x_positions, y_positions)
-                    # Calculate pitch widths as differences between consecutive positions
-                    pitch_widths = []
-                    pitch_heights = []
-                    pitch_widths.append(x_positions[0] - track_width / 2)
-                    pitch_heights.append(y_positions[0] - track_height / 2)
-                    for i in range(resolution[1] - 1):
-                        pitch_widths.append(x_positions[i + 1] - x_positions[i] - track_width)
-                    for i in range(resolution[0] - 1):
-                        pitch_heights.append(y_positions[i + 1] - y_positions[i] - track_height)
-
+                for j in range(0, resolution[1]):
+                    total_width += pitch_widths[j] + sensor_widths[j]
+                for i in range(0, resolution[0]):
+                    total_height += pitch_heights[i] + sensor_heights[i]
+                # Check conditions
+                if total_width <= rescaled_mat_size[1] and total_height <= rescaled_mat_size[0]:
+                    print(count, x_positions, y_positions)
+                    count += 1
                     # Valid combination
                     valid_combinations.append((pitch_widths, pitch_heights))
-
     # Output the valid combinations
     print(f"Found {len(valid_combinations)} valid track placements:")
+    '''
     layout_errors = []
     for i, (pitch_widths, pitch_heights) in enumerate(valid_combinations, 1):
         print(f"Combination {i}: Pitch Widths: {pitch_widths}, Pitch Heights: {pitch_heights}")
@@ -350,7 +371,8 @@ if __name__ == "__main__":
 
     print(min(layout_errors))
     # create_animated_plot(heatmaps)
-
+    '''
+    plot_track_layout(sensor_heights, sensor_widths, valid_combinations[1], valid_combinations[1], valid_combinations[0])
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
