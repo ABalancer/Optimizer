@@ -192,7 +192,6 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
     y_e = 100 * abs((y_cop - y_cop_e) / y_cop)
     # print("Real x: %3.2f, y: %3.2f, Estimate x: %3.2f, y: %3.2f, Error x: %2.3f%%, y: %2.3f%%" %
     #      (1000 * x_cop, 1000 * y_cop, 1000 * x_cop_e, 1000 * y_cop_e, x_e, y_e))
-
     return x_e, y_e, adc_map
 
 
@@ -245,24 +244,22 @@ def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_
     matrix_rect = patches.Rectangle((0, 0), matrix_width, matrix_height, linewidth=1, edgecolor='black',
                                     facecolor='none')
     ax.add_patch(matrix_rect)
-
+    track_x = -conductor_widths[0]
+    track_y = -conductor_heights[0]
     # Draw each track as a rectangle centered on x_positions and y_positions
-    for x in x_positions:
-        for y in y_positions:
-            # Calculate the bottom-left corner of each track
-            track_x = x - track_width / 2
-            track_y = y - track_width / 2
-            track_rect = patches.Rectangle((track_x, track_y), track_width, track_width,
-                                           linewidth=1, edgecolor='blue',
-                                           facecolor='lightblue')
-            ax.add_patch(track_rect)
-    '''
-    # Display pitch widths and gaps on the plot
-    plt.text(0, -0.05, f'Start gap X: {start_gap_x:.3f}', ha='left')
-    plt.text(matrix_width, -0.05, f'End gap X: {end_gap_x:.3f}', ha='right')
-    plt.text(-0.05, 0, f'Start gap Y: {start_gap_y:.3f}', va='bottom', rotation=90)
-    plt.text(-0.05, matrix_height, f'End gap Y: {end_gap_y:.3f}', va='top', rotation=90)
-    '''
+    for c_w, p_w in zip(conductor_widths, pitch_widths):
+        # Calculate the bottom-left corner of each track
+        track_x += p_w + c_w
+        track_rect = patches.Rectangle((track_x, 0), c_w, matrix_height,
+                                       linewidth=1, edgecolor="None", alpha=0.5, facecolor="orange")
+        ax.add_patch(track_rect)
+
+    for c_h, p_h in zip(conductor_heights, pitch_heights):
+        # Calculate the bottom-left corner of each track
+        track_y += p_h + c_h
+        track_rect = patches.Rectangle((0, track_y), matrix_width, c_h,
+                                       linewidth=1, edgecolor="None", alpha=0.5, facecolor="orange")
+        ax.add_patch(track_rect)
 
     # Set axis limits and labels
     ax.set_xlim(-0.1, matrix_width + 0.1)
@@ -271,9 +268,8 @@ def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_
     ax.set_title("Track Layout in Matrix")
     plt.xlabel("Width (m)")
     plt.ylabel("Height (m)")
+    plt.grid(False)
 
-    # Display grid for clarity
-    ax.grid(True)
     plt.show()
 
 
@@ -308,10 +304,20 @@ if __name__ == "__main__":
     # Simulation Settings
     resolution = (4, 4)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 4
+    pitch_step_size = 2
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
+
+    # Base result
+    x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights, sensor_widths,
+                                                           sensor_heights, sensor_widths,
+                                                           user_mass, left_foot_profile, right_foot_profile)
+    absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
+
+    print(f"Absolute Error: {absolute_error}%, X Error: {x_error}, Y Error: {y_error}")
+    plot_track_layout(sensor_heights, sensor_widths, sensor_heights, sensor_widths,
+                      rescaled_mat_size[1], rescaled_mat_size[0])
 
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
     minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
@@ -329,52 +335,58 @@ if __name__ == "__main__":
     positions_x = np.arange(x_min, x_max + minimum_pitch_width, minimum_pitch_width)
     # Iterate over every combination of possible track positions
     valid_combinations = []
-    count = 0
-
+    combination_errors = []
+    valid_count = 1
+    iterations = 0
+    print(f"x combinations: {positions_x}, y combinations: {positions_y}")
+    total_combinations = math.comb(len(positions_y), resolution[0]) * math.comb(len(positions_x), resolution[1])
     for x_positions in itertools.combinations(positions_x, resolution[1]):
         for y_positions in itertools.combinations(positions_y, resolution[0]):
-            # Calculate total width and height of the arrangement
-            # Calculate pitch widths as differences between consecutive positions
-            total_width = 0
-            total_height = 0
-            pitch_widths = []
-            pitch_heights = []
-            pitch_widths.append(x_positions[0] - track_width / 2)
-            pitch_heights.append(y_positions[0] - track_height / 2)
-            if all(x_positions[i] < x_positions[i + 1] for i in range(len(x_positions) - 1)) and \
-                    all(y_positions[i] < y_positions[i + 1] for i in range(len(y_positions) - 1)):
-                for j in range(resolution[1] - 1):
-                    pitch_widths.append(x_positions[j + 1] - x_positions[j] - track_width)
-                for i in range(resolution[0] - 1):
-                    pitch_heights.append(y_positions[i + 1] - y_positions[i] - track_height)
+            iterations += 1
+            if not any(math.isclose(x_positions[n] + minimum_pitch_width, x_positions[n + 1], abs_tol=0.0001)
+                       for n in range(0, len(x_positions) - 1)):
+                if not any(math.isclose(y_positions[n] + minimum_pitch_height, y_positions[n + 1])
+                           for n in range(0, len(y_positions) - 1)):
+                    total_width = 0
+                    total_height = 0
+                    pitch_widths = []
+                    pitch_heights = []
+                    pitch_widths.append(x_positions[0] - track_width / 2)
+                    pitch_heights.append(y_positions[0] - track_height / 2)
+                    # Calculate pitch widths as differences between consecutive positions
+                    for j in range(resolution[1] - 1):
+                        pitch_widths.append(x_positions[j + 1] - x_positions[j] - track_width)
+                    for i in range(resolution[0] - 1):
+                        pitch_heights.append(y_positions[i + 1] - y_positions[i] - track_height)
 
-                for j in range(0, resolution[1]):
-                    total_width += pitch_widths[j] + sensor_widths[j]
-                for i in range(0, resolution[0]):
-                    total_height += pitch_heights[i] + sensor_heights[i]
-                # Check conditions
-                if total_width <= rescaled_mat_size[1] and total_height <= rescaled_mat_size[0]:
-                    print(count, x_positions, y_positions)
-                    count += 1
-                    # Valid combination
-                    valid_combinations.append((pitch_widths, pitch_heights))
-    # Output the valid combinations
-    print(f"Found {len(valid_combinations)} valid track placements:")
-    '''
-    layout_errors = []
-    for i, (pitch_widths, pitch_heights) in enumerate(valid_combinations, 1):
-        print(f"Combination {i}: Pitch Widths: {pitch_widths}, Pitch Heights: {pitch_heights}")
+                    # Calculate total width and height of the arrangement
+                    for j in range(0, resolution[1]):
+                        total_width += pitch_widths[j] + sensor_widths[j]
+                    for i in range(0, resolution[0]):
+                        total_height += pitch_heights[i] + sensor_heights[i]
+                    # Check conditions
+                    if total_width <= rescaled_mat_size[1] and total_height <= rescaled_mat_size[0]:
+                        x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
+                                                                               sensor_widths, pitch_heights,
+                                                                               pitch_widths, user_mass,
+                                                                               left_foot_profile, right_foot_profile)
+                        absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
+                        print(f"Iteration Number: {iterations}/{total_combinations}, "
+                              f"Error: {absolute_error}%, "
+                              f"Combinations: {y_positions}, {pitch_heights}, {x_positions}, {pitch_widths}")
+                        # Valid combination
+                        valid_combinations.append((pitch_heights, pitch_widths, x_error, y_error))
+                        combination_errors.append(absolute_error)
+                        valid_count += 1
 
-        x, y, heatmaps = run_weight_shift_scenario(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-                                                   user_mass, left_foot_profile, right_foot_profile)
-        absolute_error = np.sqrt(np.pow(x, 2) + np.pow(y, 2))
-        layout_errors.append(absolute_error)
-
-    print(min(layout_errors))
-    # create_animated_plot(heatmaps)
-    '''
-    plot_track_layout(sensor_heights, sensor_widths, valid_combinations[1], valid_combinations[0],
+    minimum_error = min(combination_errors)
+    minimum_error_index = combination_errors.index(minimum_error)
+    print(f"Produced {valid_count} valid combinations")
+    print(f"Minimum Error: {minimum_error}% at index {minimum_error_index}")
+    plot_track_layout(sensor_heights, sensor_widths,
+                      valid_combinations[minimum_error_index][0], valid_combinations[minimum_error_index][1],
                       rescaled_mat_size[1], rescaled_mat_size[0])
+
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
