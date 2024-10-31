@@ -326,7 +326,6 @@ if __name__ == "__main__":
     # Generate possible discrete locations along an axis
     positions_y = np.arange(y_min, y_max + minimum_pitch_height, minimum_pitch_height)
     positions_x = np.arange(x_min, x_max + minimum_pitch_width, minimum_pitch_width)
-
     # Iterate over every combination of possible track positions
     valid_combinations = []
     count = 0
@@ -340,8 +339,8 @@ if __name__ == "__main__":
             pitch_heights = []
             pitch_widths.append(x_positions[0] - track_width / 2)
             pitch_heights.append(y_positions[0] - track_height / 2)
-            if all(x_positions[i] <= x_positions[i + 1] for i in range(len(x_positions) - 1)) and \
-                    all(y_positions[i] <= y_positions[i + 1] for i in range(len(y_positions) - 1)):
+            if all(x_positions[i] < x_positions[i + 1] for i in range(len(x_positions) - 1)) and \
+                    all(y_positions[i] < y_positions[i + 1] for i in range(len(y_positions) - 1)):
                 for j in range(resolution[1] - 1):
                     pitch_widths.append(x_positions[j + 1] - x_positions[j] - track_width)
                 for i in range(resolution[0] - 1):
