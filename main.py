@@ -359,7 +359,7 @@ if __name__ == "__main__":
             # Prevent tracks being next to each other
             if all(pitch_widths[n] > 0 for n in range(1, len(pitch_widths))):
                 # Check symmetry
-                if pitch_widths == pitch_widths[::-1]:
+                if pitch_widths[1:] == pitch_widths[::-1][:-1]:
                     # Valid combination
                     x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
                                                                            sensor_widths, sensor_heights,
@@ -392,7 +392,6 @@ if __name__ == "__main__":
         pitch_heights = [y_positions[0] - track_height / 2]
         for i in range(resolution[0] - 1):
             pitch_heights.append(round(y_positions[i + 1] - y_positions[i] - track_height, 5))
-            print(pitch_heights)
         # Calculate total width and height of the arrangement
         for i in range(0, resolution[0]):
             total_height += pitch_heights[i] + sensor_heights[i]
@@ -401,7 +400,7 @@ if __name__ == "__main__":
             # Prevent tracks being next to each other
             if all(pitch_heights[n] > 0 for n in range(1, len(pitch_heights))):
                 # Check symmetry
-                if pitch_heights == pitch_heights[::-1]:
+                if pitch_heights[1:] == pitch_heights[::-1][:-1]:
                     x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
                                                                            sensor_widths, pitch_heights,
                                                                            pitch_widths, user_mass,
