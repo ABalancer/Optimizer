@@ -340,7 +340,8 @@ if __name__ == "__main__":
     x_errors = []
     valid_count = 1
     iterations = 0
-    print(f"x combinations: {positions_x}, y combinations: {positions_y}")
+    print(f"x combinations: {positions_x}\n"
+          f"y combinations: {positions_y}")
     total_x_combinations = math.comb(len(positions_x), resolution[1])
     print("Number of x combinations:", total_x_combinations)
     for x_positions_numpy in itertools.combinations(positions_x, resolution[1]):
