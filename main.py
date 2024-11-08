@@ -220,7 +220,7 @@ def run_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
 
-    print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
+    # print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
     return average_x_e, average_y_e, heatmaps
 
 
@@ -335,18 +335,20 @@ if __name__ == "__main__":
     positions_x = np.arange(x_min, x_max + minimum_pitch_width, minimum_pitch_width)
     # Iterate over every combination of possible track positions
     valid_combinations = []
-    combination_errors = []
+    x_errors = []
     valid_count = 1
     iterations = 0
     print(f"x combinations: {positions_x}, y combinations: {positions_y}")
-    total_combinations = math.comb(len(positions_y), resolution[0]) * math.comb(len(positions_x), resolution[1])
+    total_x_combinations = math.comb(len(positions_x), resolution[1])
+    print("Number of x combinations:", total_x_combinations)
     for x_positions in itertools.combinations(positions_x, resolution[1]):
         iterations += 1
-        if not any(math.isclose(x_positions[n] + minimum_pitch_width, x_positions[n + 1], abs_tol=0.0001)
+        if not any(math.isclose(x_positions[n] + minimum_pitch_width, x_positions[n + 1], abs_tol=0.00001)
                    for n in range(0, len(x_positions) - 1)):
             total_width = 0
-            pitch_widths = []
-            pitch_widths.append(x_positions[0] - track_width / 2)
+            pitch_widths = [x_positions[0] - track_width / 2]
+            for j in range(resolution[1] - 1):
+                pitch_widths.append(x_positions[j + 1] - x_positions[j] - track_width)
             for j in range(0, resolution[1]):
                 total_width += pitch_widths[j] + sensor_widths[j]
 
@@ -356,22 +358,33 @@ if __name__ == "__main__":
                                                                        sensor_widths, sensor_heights,
                                                                        pitch_widths, user_mass,
                                                                        left_foot_profile, right_foot_profile)
-                absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
+                # absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
 
                 valid_combinations.append((sensor_heights, pitch_widths, x_error, y_error))
-                combination_errors.append(absolute_error)
-                valid_count += 1
-    minimum_error = min(combination_errors)
-    minimum_error_index = combination_errors.index(minimum_error)
-    pitch_widths = valid_combinations[minimum_error_index][minimum_error_index][0][1]
+                x_errors.append(x_error)
+                print(f"Iteration Number: {iterations}/{total_x_combinations}, "
+                      f"X Error: {x_error}%, "
+                      f"Combinations: {x_positions}, {pitch_widths}")
 
+    minimum_x_error = min(x_errors)
+    minimum_error_index = x_errors.index(minimum_x_error)
+    pitch_widths = valid_combinations[minimum_error_index][1]
+
+    valid_combinations = []
+    combination_errors = []
+    y_combinations = math.comb(len(positions_y), resolution[0])
+    total_y_combinations = math.comb(len(positions_y), resolution[0])
+    print("Number of y combinations:", total_y_combinations)
+    iterations = 0
+    valid_count = 0
     for y_positions in itertools.combinations(positions_y, resolution[0]):
-        if not any(math.isclose(y_positions[n] + minimum_pitch_height, y_positions[n + 1])
+        iterations += 1
+        if not any(math.isclose(y_positions[n] + minimum_pitch_height, y_positions[n + 1], abs_tol=0.00001)
                    for n in range(0, len(y_positions) - 1)):
             total_height = 0
-            pitch_heights = []
-            pitch_heights.append(y_positions[0] - track_height / 2)
-
+            pitch_heights = [y_positions[0] - track_height / 2]
+            for i in range(resolution[0] - 1):
+                pitch_heights.append(y_positions[i + 1] - y_positions[i] - track_height)
             # Calculate total width and height of the arrangement
             for i in range(0, resolution[0]):
                 total_height += pitch_heights[i] + sensor_heights[i]
@@ -382,16 +395,15 @@ if __name__ == "__main__":
                                                                        pitch_widths, user_mass,
                                                                        left_foot_profile, right_foot_profile)
                 absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
-                valid_combinations.append((sensor_heights, pitch_widths, x_error, y_error))
+                valid_combinations.append((pitch_heights, pitch_widths, x_error, y_error))
                 combination_errors.append(absolute_error)
+                print(f"Iteration Number: {iterations}/{total_y_combinations}, "
+                      f"Absolute Error: {absolute_error}%, "
+                      f"Combinations: {y_positions}, {pitch_heights}")
     minimum_error = min(combination_errors)
     minimum_error_index = combination_errors.index(minimum_error)
 
-    print(f"Iteration Number: {iterations}/{total_combinations}, "
-          f"Error: {absolute_error}%, "
-          f"Combinations: {y_positions}, {pitch_heights}, {x_positions}, {pitch_widths}")
-    minimum_error = min(combination_errors)
-    minimum_error_index = combination_errors.index(minimum_error)
+    print(valid_combinations)
     print(f"Produced {valid_count} valid combinations")
     print(f"Minimum Error: {minimum_error}% at index {minimum_error_index}")
     plot_track_layout(sensor_heights, sensor_widths,
