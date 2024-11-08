@@ -302,7 +302,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (4, 4)
+    resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
     pitch_step_size = 2
 
@@ -356,20 +356,20 @@ if __name__ == "__main__":
             pitch_widths.append(round(x_positions[j + 1] - x_positions[j] - track_width, 5))
         for j in range(0, resolution[1]):
             total_width += pitch_widths[j] + sensor_widths[j]
-            if total_width <= rescaled_mat_size[1]:
-                if all(pitch_widths[n] > 0 for n in range(1, len(pitch_widths))):
-                    # Valid combination
-                    x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
-                                                                           sensor_widths, sensor_heights,
-                                                                           pitch_widths, user_mass,
-                                                                           left_foot_profile, right_foot_profile)
-                    # absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
-                    valid_count += 1
-                    valid_combinations.append((sensor_heights, pitch_widths, x_error, y_error))
-                    x_errors.append(x_error)
-                    print(f"Iteration Number: {iterations}/{total_x_combinations}, "
-                          f"X Error: {x_error}%, "
-                          f"Combinations: {x_positions}, {pitch_widths}")
+        if total_width <= rescaled_mat_size[1]:
+            if all(pitch_widths[n] > 0 for n in range(1, len(pitch_widths))):
+                # Valid combination
+                x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
+                                                                       sensor_widths, sensor_heights,
+                                                                       pitch_widths, user_mass,
+                                                                       left_foot_profile, right_foot_profile)
+                # absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
+                valid_count += 1
+                valid_combinations.append((sensor_heights, pitch_widths, x_error, y_error))
+                x_errors.append(x_error)
+                print(f"Iteration Number: {iterations}/{total_x_combinations}, "
+                      f"X Error: {x_error}%, "
+                      f"Combinations: {x_positions}, {pitch_widths}")
 
     minimum_x_error = min(x_errors)
     minimum_error_index = x_errors.index(minimum_x_error)
