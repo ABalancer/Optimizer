@@ -302,7 +302,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (8, 8)
+    resolution = (4, 4)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
     pitch_step_size = 2
 
@@ -345,11 +345,11 @@ if __name__ == "__main__":
     total_x_combinations = math.comb(len(positions_x), resolution[1])
     print("Number of x combinations:", total_x_combinations)
     for x_positions_numpy in itertools.combinations(positions_x, resolution[1]):
+        total_width = 0
         iterations += 1
         x_positions = []
         for x in x_positions_numpy:
             x_positions.append(round(float(x), 5))
-        total_width = 0
         pitch_widths = [round(x_positions[0] - track_width / 2, 5)]
         for j in range(resolution[1] - 1):
             pitch_widths.append(round(x_positions[j + 1] - x_positions[j] - track_width, 5))
@@ -384,14 +384,15 @@ if __name__ == "__main__":
     print("Number of y combinations:", total_y_combinations)
     iterations = 0
     for y_positions_numpy in itertools.combinations(positions_y, resolution[0]):
+        iterations += 1
+        total_height = 0
         y_positions = []
         for y in y_positions_numpy:
             y_positions.append(round(float(y), 5))
-        iterations += 1
-        total_height = 0
         pitch_heights = [y_positions[0] - track_height / 2]
         for i in range(resolution[0] - 1):
-            pitch_heights.append(y_positions[i + 1] - y_positions[i] - track_height)
+            pitch_heights.append(round(y_positions[i + 1] - y_positions[i] - track_height, 5))
+            print(pitch_heights)
         # Calculate total width and height of the arrangement
         for i in range(0, resolution[0]):
             total_height += pitch_heights[i] + sensor_heights[i]
