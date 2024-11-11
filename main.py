@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.animation as animation
 import itertools
+import json
 from scipy.ndimage import zoom
 
 
@@ -273,6 +274,25 @@ def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_
     plt.show()
 
 
+def save_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, mat_height, mat_width):
+    layout_data = {
+        "Conductor_Heights": conductor_heights,
+        "Conductor_Widths": conductor_widths,
+        "Pitch_Heights": pitch_heights,
+        "Pitch_Widths": pitch_widths,
+        "Mat_Height": mat_height,
+        "Mat_Width": mat_width
+    }
+    with open("layout.json", "w") as file:
+        json.dump(layout_data, file, index=4)
+
+
+def open_layout(file_name):
+    with open(file_name, "r") as file:
+        layout_data = json.load(file)
+    return layout_data
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
@@ -424,9 +444,12 @@ if __name__ == "__main__":
     print(f"Minimum Error: {minimum_error}% at index {minimum_error_index}")
     print(f"Pitch Heights: {valid_combinations[minimum_error_index][0]}\n"
           f"Pitch Widths: {valid_combinations[minimum_error_index][1]}")
+    save_layout(sensor_heights, sensor_widths,
+                valid_combinations[minimum_error_index][0], valid_combinations[minimum_error_index][1],
+                mat_size[0], mat_size[1])
     plot_track_layout(sensor_heights, sensor_widths,
                       valid_combinations[minimum_error_index][0], valid_combinations[minimum_error_index][1],
-                      rescaled_mat_size[1], rescaled_mat_size[0])
+                      rescaled_mat_size[0], rescaled_mat_size[1])
 
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
