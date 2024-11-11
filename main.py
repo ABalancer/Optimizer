@@ -302,9 +302,9 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (4, 4)
+    resolution = (16, 16)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 4
+    pitch_step_size = 2
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
@@ -348,6 +348,7 @@ if __name__ == "__main__":
         total_width = 0
         iterations += 1
         x_positions = []
+        print(f"Iteration Number: {iterations}/{total_x_combinations}")
         for x in x_positions_numpy:
             x_positions.append(round(float(x), 5))
         pitch_widths = [round(x_positions[0] - track_width / 2, 5)]
@@ -371,8 +372,7 @@ if __name__ == "__main__":
                     valid_count += 1
                     valid_combinations.append((sensor_heights, pitch_widths, x_error, y_error))
                     x_errors.append(x_error)
-                    print(f"Iteration Number: {iterations}/{total_x_combinations}, "
-                          f"X Error: {x_error}%, "
+                    print(f"X Error: {x_error}%, "
                           f"Combinations: {x_positions}, {pitch_widths}")
 
     minimum_x_error = min(x_errors)
@@ -389,6 +389,7 @@ if __name__ == "__main__":
         iterations += 1
         total_height = 0
         y_positions = []
+        print("Iteration Number: {iterations}/{total_y_combinations}")
         for y in y_positions_numpy:
             y_positions.append(round(float(y), 5))
         pitch_heights = [y_positions[0] - track_height / 2]
@@ -413,8 +414,7 @@ if __name__ == "__main__":
                     valid_combinations.append((pitch_heights, pitch_widths, x_error, y_error))
                     combination_errors.append(absolute_error)
                     valid_count += 1
-                    print(f"Iteration Number: {iterations}/{total_y_combinations}, "
-                          f"Absolute Error: {absolute_error}%, "
+                    print(f"Absolute Error: {absolute_error}%, "
                           f"Combinations: {y_positions}, {pitch_heights}")
     minimum_error = min(combination_errors)
     minimum_error_index = combination_errors.index(minimum_error)
