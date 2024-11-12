@@ -284,7 +284,7 @@ def save_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths
         "Mat_Width": mat_width
     }
     with open("layout.json", "w") as file:
-        json.dump(layout_data, file, index=4)
+        json.dump(layout_data, file, indent=4)
 
 
 def open_layout(file_name):
@@ -322,7 +322,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (16, 16)
+    resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
     pitch_step_size = 2
 
@@ -409,7 +409,7 @@ if __name__ == "__main__":
         iterations += 1
         total_height = 0
         y_positions = []
-        print("Iteration Number: {iterations}/{total_y_combinations}")
+        print(f"Iteration Number: {iterations}/{total_y_combinations}")
         for y in y_positions_numpy:
             y_positions.append(round(float(y), 5))
         pitch_heights = [y_positions[0] - track_height / 2]
