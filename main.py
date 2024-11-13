@@ -283,7 +283,7 @@ def save_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths
         "Mat_Height": mat_height,
         "Mat_Width": mat_width
     }
-    with open("layout.json", "w") as file:
+    with open("layout_2.json", "w") as file:
         json.dump(layout_data, file, indent=4)
 
 
@@ -324,7 +324,7 @@ if __name__ == "__main__":
     # Simulation Settings
     resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 2
+    pitch_step_size = 3
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
     minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
 
-    print(minimum_pitch_width, minimum_pitch_height)
+    print(minimum_pitch_height, minimum_pitch_width)
 
     track_height = scale_factor * mat_size[0] / resolution[0] / 2
     track_width = scale_factor * mat_size[1] / resolution[1] / 2
@@ -430,8 +430,8 @@ if __name__ == "__main__":
                                                                            sensor_widths, pitch_heights,
                                                                            pitch_widths, user_mass,
                                                                            left_foot_profile, right_foot_profile)
-                    absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
-                    valid_combinations.append((pitch_heights, pitch_widths, x_error, y_error))
+                    absolute_error = float(np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2)))
+                    valid_combinations.append((pitch_heights, pitch_widths, float(x_error), float(y_error)))
                     combination_errors.append(absolute_error)
                     valid_count += 1
                     print(f"Absolute Error: {absolute_error}%, "
@@ -439,12 +439,11 @@ if __name__ == "__main__":
     minimum_error = min(combination_errors)
     minimum_error_index = combination_errors.index(minimum_error)
 
-    print(valid_combinations)
     print(f"Produced {valid_count} valid combinations")
     print(f"Minimum Error: {minimum_error}% at index {minimum_error_index}")
     print(f"Pitch Heights: {valid_combinations[minimum_error_index][0]}\n"
           f"Pitch Widths: {valid_combinations[minimum_error_index][1]}")
-    save_layout(sensor_heights, sensor_widths,
+    save_layout(sensor_heights.tolist(), sensor_widths.tolist(),
                 valid_combinations[minimum_error_index][0], valid_combinations[minimum_error_index][1],
                 mat_size[0], mat_size[1])
     plot_track_layout(sensor_heights, sensor_widths,
