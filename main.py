@@ -322,7 +322,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (4, 4)
+    resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
     pitch_step_size = 2
 
@@ -381,8 +381,9 @@ if __name__ == "__main__":
             if all(pitch_widths[n] > 0 for n in range(1, len(pitch_widths))):
                 # Check symmetry
                 symmetry_list = pitch_widths.copy()
-                symmetry_list.append(round(mat_size[1] - x_positions[-1], 5))
+                symmetry_list.append(round(rescaled_mat_size[1] - x_positions[-1] - x_min, 5))
                 if symmetry_list == symmetry_list[::-1]:
+                    #if round(sum(symmetry_list) + sum(symmetry_list), 3) != mat_size[1]:
                     # Valid combination
                     x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
                                                                            sensor_widths, sensor_heights,
@@ -424,8 +425,9 @@ if __name__ == "__main__":
             if all(pitch_heights[n] > 0 for n in range(1, len(pitch_heights))):
                 # Check symmetry
                 symmetry_list = pitch_heights.copy()
-                symmetry_list.append(round(mat_size[0] - y_positions[-1], 5))
+                symmetry_list.append(round(rescaled_mat_size[0] - y_positions[-1] - y_min, 5))
                 if symmetry_list == symmetry_list[::-1]:
+                    # if round(sum(symmetry_list) + sum(symmetry_list), 3) != mat_size[0]:
                     x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
                                                                            sensor_widths, pitch_heights,
                                                                            pitch_widths, user_mass,
