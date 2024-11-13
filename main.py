@@ -322,9 +322,9 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (8, 8)
+    resolution = (4, 4)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 3
+    pitch_step_size = 2
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
@@ -380,7 +380,7 @@ if __name__ == "__main__":
             # Prevent tracks being next to each other
             if all(pitch_widths[n] > 0 for n in range(1, len(pitch_widths))):
                 # Check symmetry
-                symmetry_list = pitch_widths
+                symmetry_list = pitch_widths.copy()
                 symmetry_list.append(round(mat_size[1] - x_positions[-1], 5))
                 if symmetry_list == symmetry_list[::-1]:
                     # Valid combination
@@ -423,7 +423,7 @@ if __name__ == "__main__":
             # Prevent tracks being next to each other
             if all(pitch_heights[n] > 0 for n in range(1, len(pitch_heights))):
                 # Check symmetry
-                symmetry_list = pitch_heights
+                symmetry_list = pitch_heights.copy()
                 symmetry_list.append(round(mat_size[0] - y_positions[-1], 5))
                 if symmetry_list == symmetry_list[::-1]:
                     x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
