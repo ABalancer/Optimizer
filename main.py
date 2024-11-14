@@ -236,6 +236,8 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
     left_foot_mass = user_mass / 2
     right_foot_mass = user_mass / 2
+    temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
+    temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
 
     rescaled_foot_width = 113
     left_foot_start = round(rescaled_foot_width / 2)
@@ -253,7 +255,7 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
                                    + 3 * right_foot_centre[0] - 2 * right_foot_end)
 
         high_res_heatmap_matrix = move_feet(left_foot_position, right_foot_position,
-                                            left_foot_profile, right_foot_profile, high_res_resolution)
+                                            temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
         x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
                                                        high_res_heatmap_matrix, piezo)
 
