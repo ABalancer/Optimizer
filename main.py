@@ -196,8 +196,8 @@ def compute_error_for_instance(conductor_heights, conductor_widths, pitch_height
     return x_e, y_e, adc_map
 
 
-def run_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
-                              user_mass, left_foot_profile, right_foot_profile, piezo=False):
+def run_side_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                                   user_mass, left_foot_profile, right_foot_profile, piezo=False):
     average_x_e = 0
     average_y_e = 0
 
@@ -215,6 +215,48 @@ def run_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
         x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
                                                        high_res_heatmap_matrix, piezo)
+        average_x_e += x_e
+        average_y_e += y_e
+        heatmaps[np.where(time_steps == t)] = adc_map
+    average_x_e /= number_of_time_stamps
+    average_y_e /= number_of_time_stamps
+
+    # print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
+    return average_x_e, average_y_e, heatmaps
+
+
+def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                            user_mass, left_foot_profile, right_foot_profile, piezo=False):
+    average_x_e = 0
+    average_y_e = 0
+
+    time_step = 0.1  # Seconds
+    time_steps = np.arange(0, total_time + time_step, time_step)
+    number_of_time_stamps = len(time_steps)
+    heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
+    left_foot_mass = user_mass / 2
+    right_foot_mass = user_mass / 2
+
+    rescaled_foot_width = 113
+    left_foot_start = round(rescaled_foot_width / 2)
+    right_foot_end = rescaled_mat_size[1] - round(rescaled_foot_width / 2)
+    left_foot_gradient = (left_foot_centre[1] - left_foot_start) / (len(time_steps) - 1) / 2
+    right_foot_gradient = (right_foot_end - right_foot_centre[1]) / (len(time_steps) - 1) / 2
+
+    for t in time_steps:
+        if t < total_time / 2:
+            left_foot_position = (left_foot_centre[0], left_foot_gradient * t)
+            right_foot_position = right_foot_centre
+        else:
+            left_foot_position = left_foot_centre
+            right_foot_position = (right_foot_centre[0], right_foot_gradient * t
+                                   + 3 * right_foot_centre[0] - 2 * right_foot_end)
+
+        high_res_heatmap_matrix = move_feet(left_foot_position, right_foot_position,
+                                            left_foot_profile, right_foot_profile, high_res_resolution)
+        x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                                                       high_res_heatmap_matrix, piezo)
+
         average_x_e += x_e
         average_y_e += y_e
         heatmaps[np.where(time_steps == t)] = adc_map
@@ -324,13 +366,13 @@ if __name__ == "__main__":
     # Simulation Settings
     resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 2
+    pitch_step_size = 3
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
 
     # Base result
-    x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights, sensor_widths,
+    x_error, y_error, heatmaps = run_side_weight_shift_scenario(sensor_heights, sensor_widths,
                                                            sensor_heights, sensor_widths,
                                                            user_mass, left_foot_profile, right_foot_profile)
     absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
@@ -360,6 +402,7 @@ if __name__ == "__main__":
     x_errors = []
     valid_count = 1
     iterations = 0
+    round_precision = 5
     print(f"x combinations: {positions_x}\n"
           f"y combinations: {positions_y}")
     total_x_combinations = math.comb(len(positions_x), resolution[1])
@@ -370,10 +413,10 @@ if __name__ == "__main__":
         x_positions = []
         print(f"Iteration Number: {iterations}/{total_x_combinations}")
         for x in x_positions_numpy:
-            x_positions.append(round(float(x), 5))
-        pitch_widths = [round(x_positions[0] - track_width / 2, 5)]
+            x_positions.append(round(float(x), round_precision))
+        pitch_widths = [round(x_positions[0] - track_width / 2, round_precision)]
         for j in range(resolution[1] - 1):
-            pitch_widths.append(round(x_positions[j + 1] - x_positions[j] - track_width, 5))
+            pitch_widths.append(round(x_positions[j + 1] - x_positions[j] - track_width, round_precision))
         for j in range(0, resolution[1]):
             total_width += pitch_widths[j] + sensor_widths[j]
         if total_width <= rescaled_mat_size[1]:
@@ -381,11 +424,10 @@ if __name__ == "__main__":
             if all(pitch_widths[n] > 0 for n in range(1, len(pitch_widths))):
                 # Check symmetry
                 symmetry_list = pitch_widths.copy()
-                symmetry_list.append(round(rescaled_mat_size[1] - x_positions[-1] - x_min, 5))
+                symmetry_list.append(round(rescaled_mat_size[1] - x_positions[-1] - x_min, round_precision))
                 if symmetry_list == symmetry_list[::-1]:
-                    #if round(sum(symmetry_list) + sum(symmetry_list), 3) != mat_size[1]:
                     # Valid combination
-                    x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
+                    x_error, y_error, heatmaps = run_side_weight_shift_scenario(sensor_heights,
                                                                            sensor_widths, sensor_heights,
                                                                            pitch_widths, user_mass,
                                                                            left_foot_profile, right_foot_profile)
@@ -412,10 +454,10 @@ if __name__ == "__main__":
         y_positions = []
         print(f"Iteration Number: {iterations}/{total_y_combinations}")
         for y in y_positions_numpy:
-            y_positions.append(round(float(y), 5))
+            y_positions.append(round(float(y), round_precision))
         pitch_heights = [y_positions[0] - track_height / 2]
         for i in range(resolution[0] - 1):
-            pitch_heights.append(round(y_positions[i + 1] - y_positions[i] - track_height, 5))
+            pitch_heights.append(round(y_positions[i + 1] - y_positions[i] - track_height, round_precision))
         # Calculate total width and height of the arrangement
         for i in range(0, resolution[0]):
             total_height += pitch_heights[i] + sensor_heights[i]
@@ -425,10 +467,9 @@ if __name__ == "__main__":
             if all(pitch_heights[n] > 0 for n in range(1, len(pitch_heights))):
                 # Check symmetry
                 symmetry_list = pitch_heights.copy()
-                symmetry_list.append(round(rescaled_mat_size[0] - y_positions[-1] - y_min, 5))
+                symmetry_list.append(round(rescaled_mat_size[0] - y_positions[-1] - y_min, round_precision))
                 if symmetry_list == symmetry_list[::-1]:
-                    # if round(sum(symmetry_list) + sum(symmetry_list), 3) != mat_size[0]:
-                    x_error, y_error, heatmaps = run_weight_shift_scenario(sensor_heights,
+                    x_error, y_error, heatmaps = run_side_weight_shift_scenario(sensor_heights,
                                                                            sensor_widths, pitch_heights,
                                                                            pitch_widths, user_mass,
                                                                            left_foot_profile, right_foot_profile)
