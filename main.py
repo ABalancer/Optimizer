@@ -44,12 +44,14 @@ def move_feet(left_foot_centre, right_foot_centre, left_foot_profile, right_foot
     foot_height, foot_width = left_foot_profile.shape
 
     # Calculate top-left corner for small_matrix1
-    top_left_of_left_foot = (left_foot_centre[0] - foot_height // 2, left_foot_centre[1] - foot_width // 2)
+    top_left_of_left_foot = (round(left_foot_centre[0]) - foot_height // 2,
+                             round(left_foot_centre[1]) - foot_width // 2)
 
     mat_matrix[top_left_of_left_foot[0]:top_left_of_left_foot[0] + foot_height,
                top_left_of_left_foot[1]:top_left_of_left_foot[1] + foot_width] = left_foot_profile
 
-    top_left_of_right_foot = (right_foot_centre[0] - foot_height // 2, right_foot_centre[1] - foot_width // 2)
+    top_left_of_right_foot = (round(right_foot_centre[0]) - foot_height // 2,
+                              round(right_foot_centre[1]) - foot_width // 2)
 
     mat_matrix[top_left_of_right_foot[0]:top_left_of_right_foot[0] + foot_height,
                top_left_of_right_foot[1]:top_left_of_right_foot[1] + foot_width] = right_foot_profile
@@ -238,21 +240,20 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     right_foot_mass = user_mass / 2
     temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
     temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
-
-    rescaled_foot_width = 113
-    left_foot_start = round(rescaled_foot_width / 2)
-    right_foot_end = rescaled_mat_size[1] - round(rescaled_foot_width / 2)
-    left_foot_gradient = (left_foot_centre[1] - left_foot_start) / (len(time_steps) - 1) / 2
-    right_foot_gradient = (right_foot_end - right_foot_centre[1]) / (len(time_steps) - 1) / 2
+    foot_height, foot_width = left_foot_profile.shape
+    left_foot_start = round(foot_width / 2)
+    right_foot_end = (1000 * rescaled_mat_size[1]) - round(foot_width / 2)
+    left_foot_gradient = 2 * (left_foot_centre[1] - left_foot_start) / total_time
+    right_foot_gradient = 2 * (right_foot_end - right_foot_centre[1]) / total_time
 
     for t in time_steps:
         if t < total_time / 2:
-            left_foot_position = (left_foot_centre[0], left_foot_gradient * t)
+            left_foot_position = (left_foot_centre[0], left_foot_gradient * t + left_foot_start)
             right_foot_position = right_foot_centre
         else:
             left_foot_position = left_foot_centre
             right_foot_position = (right_foot_centre[0], right_foot_gradient * t
-                                   + 3 * right_foot_centre[0] - 2 * right_foot_end)
+                                   + 2 * right_foot_centre[1] - right_foot_end)
 
         high_res_heatmap_matrix = move_feet(left_foot_position, right_foot_position,
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
@@ -375,14 +376,21 @@ if __name__ == "__main__":
 
     # Base result
     x_error, y_error, heatmaps = run_side_weight_shift_scenario(sensor_heights, sensor_widths,
-                                                           sensor_heights, sensor_widths,
-                                                           user_mass, left_foot_profile, right_foot_profile)
+                                                                sensor_heights, sensor_widths,
+                                                                user_mass, left_foot_profile, right_foot_profile)
+
+    x_error, y_error, heatmaps = run_foot_slide_scenario(sensor_heights, sensor_widths,
+                                                         sensor_heights, sensor_widths,
+                                                         user_mass, left_foot_profile, right_foot_profile)
+
     absolute_error = np.sqrt(np.pow(x_error, 2) + np.pow(y_error, 2))
 
     print(f"Absolute Error: {absolute_error}%, X Error: {x_error}, Y Error: {y_error}")
     plot_track_layout(sensor_heights, sensor_widths, sensor_heights, sensor_widths,
                       rescaled_mat_size[1], rescaled_mat_size[0])
+    create_animated_plot(heatmaps)
 
+    '''
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
     minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
 
@@ -495,6 +503,7 @@ if __name__ == "__main__":
                       valid_combinations[minimum_error_index][0], valid_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1])
 
+    '''
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
