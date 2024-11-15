@@ -493,18 +493,18 @@ if __name__ == "__main__":
                     valid_combinations.append((pitch_heights, pitch_widths, float(x_error), float(y_error)))
                     combination_errors.append(absolute_error)
                     valid_count += 1
-                    print("Absolute Error: %f2.2%%, X Error: %f2.2%%, Y Error: %f2.2%%"
+                    print("Absolute Error: %2.2f%%, X Error: %2.2f%%, Y Error: %2.2f%%"
                           % (absolute_error, x_error, y_error))
                     print("Combinations: ", pitch_heights, pitch_widths)
     minimum_error = min(combination_errors)
     minimum_error_index = combination_errors.index(minimum_error)
 
     print(f"Produced {valid_count} valid combinations")
-    print("Minimum Errors: A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%" % (combination_errors[minimum_error_index],
+    print("Optimal Errors: A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%" % (combination_errors[minimum_error_index],
                                                                   valid_combinations[minimum_error_index][2],
                                                                   valid_combinations[minimum_error_index][3]))
-    print(f"Pitch Heights: {valid_combinations[minimum_error_index][0]}\n"
-          f"Pitch Widths: {valid_combinations[minimum_error_index][1]}")
+    print(f"Optimal Heights: {valid_combinations[minimum_error_index][0]}\n"
+          f"Optimal Widths: {valid_combinations[minimum_error_index][1]}")
     save_layout(sensor_heights.tolist(), sensor_widths.tolist(),
                 valid_combinations[minimum_error_index][0], valid_combinations[minimum_error_index][1],
                 mat_size[0], mat_size[1])
