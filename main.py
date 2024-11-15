@@ -302,6 +302,37 @@ def create_animated_plot(heatmaps):
     plt.show()
 
 
+def subtract_matrices(big_matrix, small_matrix, start_row, start_col):
+    end_row = start_row + small_matrix.shape[0]
+    end_col = start_col + small_matrix.shape[1]
+    big_matrix[start_row:end_row, start_col:end_col] -= small_matrix
+    return big_matrix
+
+
+def fit_profile(matrix, profile):
+    list_of_areas = []
+    list_of_locations = []
+    for i in range(0, matrix.shape[0] - profile.shape[0]):
+        for j in range(0, matrix.shape[1] - profile.shape[1]):
+            subtracted_matrix = subtract_matrices(matrix.copy(), profile.copy(), i, j)
+            list_of_areas.append(np.sum(subtracted_matrix))
+            list_of_locations.append((i + profile.shape[0] // 2, j + profile.shape[1] // 2))
+    minimum_area = min(list_of_areas)
+    best_location = list_of_locations[list_of_areas.index(minimum_area)]
+    return minimum_area, best_location
+
+
+def create_area_map(matrix, threshold=0.0):
+    area_matrix = np.zeros(matrix.shape, dtype=np.uint8)
+    for i in range(area_matrix.shape[0]):
+        for j in range(area_matrix.shape[1]):
+            if matrix[i][j] > threshold:
+                area_matrix[i][j] = 1
+            else:
+                area_matrix[i][j] = 0
+    return area_matrix
+
+
 def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_height, matrix_width):
     fig, ax = plt.subplots(figsize=(6, 6))
 
@@ -381,12 +412,16 @@ if __name__ == "__main__":
     left_foot_profile = rescale_mass(left_foot_profile, user_mass / 2)
     right_foot_profile = np.flip(left_foot_profile, axis=1)
 
+    base_case = move_feet(left_foot_centre, right_foot_centre,
+                          left_foot_profile, right_foot_profile, high_res_resolution)
+    real_x, real_y = centre_of_pressure(base_case)
+
     # Sensor parameters
     R0 = 0.2325  # resistance per metre squared
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (4, 4)
+    resolution = (16, 16)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
     pitch_step_size = 3
 
@@ -399,10 +434,43 @@ if __name__ == "__main__":
                                                      user_mass, left_foot_profile, right_foot_profile, False)
 
     print("Absolute Error: %2.2f%%, X Error: %2.2f%%, Y Error: %2.2f%%" % (absolute_error, x_error, y_error))
-    plot_track_layout(sensor_heights, sensor_widths,
-                      sensor_heights, sensor_widths,
-                      rescaled_mat_size[1], rescaled_mat_size[0])
+    #plot_track_layout(sensor_heights, sensor_widths,
+    #                  sensor_heights, sensor_widths,
+    #                  rescaled_mat_size[1], rescaled_mat_size[0])
 
+    high_res_matrix = move_feet(left_foot_centre, right_foot_centre,
+                                left_foot_profile, right_foot_profile, high_res_resolution)
+    low_res_matrix = create_low_res_mat(sensor_heights, sensor_widths,
+                                        sensor_heights, sensor_widths, high_res_matrix)
+    # make resize
+    resized_low_res_matrix = np.repeat(np.repeat(low_res_matrix, round(high_res_resolution[0] / resolution[0]), axis=0),
+                                       round(high_res_resolution[1] / resolution[1]), axis=1)
+
+    plot_heatmap(resized_low_res_matrix)
+    # convert to 0s and 1s
+    low_res_area_matrix = create_area_map(resized_low_res_matrix, threshold=0.5)
+    left_foot_area = create_area_map(left_foot_profile, threshold=0.0001)
+    right_foot_area = create_area_map(right_foot_profile, threshold=0.0001)
+
+    left_half = low_res_area_matrix.copy()
+    right_half = low_res_area_matrix.copy()
+    left_half[:, round(low_res_area_matrix.shape[1] / 2):] = 0
+    right_half[:, :round(low_res_area_matrix.shape[1] / 2)] = 0
+
+    minimum_area_left, best_location_left = fit_profile(left_half, left_foot_area)
+    minimum_area_right, best_location_right = fit_profile(right_half, right_foot_area)
+    estimated_matrix = move_feet(best_location_left, best_location_right,
+                                 left_foot_profile, right_foot_profile, high_res_resolution)
+
+    estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
+    x_e = 100 * abs((real_x - estimated_x) / real_x)
+    y_e = 100 * abs((real_y - estimated_y) / real_y)
+
+    print("Real CoP: (%2.2f, %2.2f)\nEstimated CoP: (%2.2f, %2.2f)\nError: (%2.2f%%, %2.2f%%)" %
+          (real_x, real_y, estimated_x, estimated_y, x_e, y_e))
+    plot_heatmap(estimated_matrix)
+
+    '''
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
     minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
 
@@ -511,7 +579,7 @@ if __name__ == "__main__":
     plot_track_layout(sensor_heights, sensor_widths,
                       valid_combinations[minimum_error_index][0], valid_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1])
-
+    '''
     '''
     np.save("centre_of_pressure_results.npy", cop_values)
     '''
