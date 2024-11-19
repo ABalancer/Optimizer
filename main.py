@@ -289,8 +289,8 @@ def run_layout_scenarios(conductor_heights, conductor_widths, pitch_heights, pit
     return _absolute_error, _x_error, _y_error
 
 
-def run_foot_placement_scenarios(first_pitch_height, first_pitch_width,
-                                 left_foot_profile, right_foot_profile):
+def run_footprint_placement_scenarios(first_pitch_height, first_pitch_width,
+                                      left_foot_profile, right_foot_profile):
     average_x_e = 0
     average_y_e = 0
     average_a_e = 0
@@ -316,22 +316,22 @@ def run_foot_placement_scenarios(first_pitch_height, first_pitch_width,
         high_res_matrix = move_feet(left_foot_position, right_foot_position,
                                     left_foot_profile, right_foot_profile, high_res_resolution)
 
+        real_x, real_y = centre_of_pressure(high_res_matrix.copy())
+
         low_res_matrix = create_low_res_mat(sensor_heights, sensor_widths,
-                                            sensor_heights, sensor_widths, high_res_matrix)
+                                            sensor_heights, sensor_widths, high_res_matrix.copy())
         # make resize
         resized_low_res_matrix = np.repeat(
             np.repeat(low_res_matrix, round(high_res_resolution[0] / resolution[0]), axis=0),
             round(high_res_resolution[1] / resolution[1]), axis=1)
 
-        # plot_heatmap(resized_low_res_matrix)
-
         left_half = resized_low_res_matrix.copy()
         right_half = resized_low_res_matrix.copy()
         left_half[:, round(resized_low_res_matrix.shape[1] / 2):] = 0
         right_half[:, :round(resized_low_res_matrix.shape[1] / 2)] = 0
-        best_location_left = fit_profile(left_half, left_foot_profile,
+        best_location_left = fit_profile(left_half.copy(), left_foot_profile,
                                          first_pitch_width, first_pitch_height)
-        best_location_right = fit_profile(right_half, right_foot_profile,
+        best_location_right = fit_profile(right_half.copy(), right_foot_profile,
                                           first_pitch_width, first_pitch_height)
         estimated_matrix = move_feet(best_location_left, best_location_right,
                                      left_foot_profile, right_foot_profile, high_res_resolution)
@@ -340,10 +340,12 @@ def run_foot_placement_scenarios(first_pitch_height, first_pitch_width,
         x_e = 100 * abs((real_x - estimated_x) / real_x)
         y_e = 100 * abs((real_y - estimated_y) / real_y)
         a_e = np.sqrt(x_e ** 2 + y_e ** 2)
+        print(a_e, x_e, y_e)
 
         average_x_e += x_e
         average_y_e += y_e
         average_a_e += a_e
+        print(f"{t}/{total_time}")
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
     average_a_e /= number_of_time_stamps
@@ -479,7 +481,6 @@ if __name__ == "__main__":
 
     base_case = move_feet(left_foot_centre, right_foot_centre,
                           left_foot_profile, right_foot_profile, high_res_resolution)
-    real_x, real_y = centre_of_pressure(base_case)
 
     # Sensor parameters
     R0 = 0.2325  # resistance per metre squared
@@ -502,6 +503,7 @@ if __name__ == "__main__":
     #plot_track_layout(sensor_heights, sensor_widths,
     #                  sensor_heights, sensor_widths,
     #                  rescaled_mat_size[1], rescaled_mat_size[0])
+    '''
 
     high_res_matrix = move_feet(left_foot_centre, right_foot_centre,
                                 left_foot_profile, right_foot_profile, high_res_resolution)
@@ -528,9 +530,10 @@ if __name__ == "__main__":
     x_e = 100 * abs((real_x - estimated_x) / real_x)
     y_e = 100 * abs((real_y - estimated_y) / real_y)
     a_e = np.sqrt(x_e ** 2 + y_e ** 2)
-    print("Real CoP: (%2.2f, %2.2f)\nEstimated CoP: (%2.2f, %2.2f)\nError: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" %
-          (real_x, real_y, estimated_x, estimated_y, a_e, x_e, y_e))
-    plot_heatmap(estimated_matrix)
+    '''
+    a_e, x_e, y_e = run_footprint_placement_scenarios(sensor_heights[0], sensor_widths[0],
+                                                      left_foot_profile, right_foot_profile)
+    print("Error: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" % (a_e, x_e, y_e))
 
     '''
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
