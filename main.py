@@ -487,7 +487,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (8, 8)
+    resolution = (16, 16)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
     pitch_step_size = 3
 
@@ -500,37 +500,7 @@ if __name__ == "__main__":
                                                             user_mass, left_foot_profile, right_foot_profile, False)
 
     print("Absolute Error: %2.2f%%, X Error: %2.2f%%, Y Error: %2.2f%%" % (absolute_error, x_error, y_error))
-    #plot_track_layout(sensor_heights, sensor_widths,
-    #                  sensor_heights, sensor_widths,
-    #                  rescaled_mat_size[1], rescaled_mat_size[0])
-    '''
 
-    high_res_matrix = move_feet(left_foot_centre, right_foot_centre,
-                                left_foot_profile, right_foot_profile, high_res_resolution)
-    low_res_matrix = create_low_res_mat(sensor_heights, sensor_widths,
-                                        sensor_heights, sensor_widths, high_res_matrix)
-    # make resize
-    resized_low_res_matrix = np.repeat(np.repeat(low_res_matrix, round(high_res_resolution[0] / resolution[0]), axis=0),
-                                       round(high_res_resolution[1] / resolution[1]), axis=1)
-
-    # plot_heatmap(resized_low_res_matrix)
-
-    left_half = resized_low_res_matrix.copy()
-    right_half = resized_low_res_matrix.copy()
-    left_half[:, round(resized_low_res_matrix.shape[1] / 2):] = 0
-    right_half[:, :round(resized_low_res_matrix.shape[1] / 2)] = 0
-    best_location_left = fit_profile(left_half, left_foot_profile,
-                                     sensor_widths[0], sensor_heights[0])
-    best_location_right = fit_profile(right_half, right_foot_profile,
-                                      sensor_widths[0], sensor_heights[0])
-    estimated_matrix = move_feet(best_location_left, best_location_right,
-                                 left_foot_profile, right_foot_profile, high_res_resolution)
-
-    estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
-    x_e = 100 * abs((real_x - estimated_x) / real_x)
-    y_e = 100 * abs((real_y - estimated_y) / real_y)
-    a_e = np.sqrt(x_e ** 2 + y_e ** 2)
-    '''
     a_e, x_e, y_e = run_footprint_placement_scenarios(sensor_heights[0], sensor_widths[0],
                                                       left_foot_profile, right_foot_profile)
     print("Error: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" % (a_e, x_e, y_e))
