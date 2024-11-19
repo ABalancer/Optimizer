@@ -270,8 +270,8 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     return average_x_e, average_y_e, heatmaps
 
 
-def run_scenarios(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
-                  user_mass, left_foot_profile, right_foot_profile, piezo=False):
+def run_layout_scenarios(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                         user_mass, left_foot_profile, right_foot_profile, piezo=False):
     _x_error = 0
     _y_error = 0
 
@@ -287,6 +287,69 @@ def run_scenarios(conductor_heights, conductor_widths, pitch_heights, pitch_widt
     _y_error = (y_error_1 + y_error_2) / 2
     _absolute_error = np.sqrt(np.pow(_x_error, 2) + np.pow(_y_error, 2))
     return _absolute_error, _x_error, _y_error
+
+
+def run_foot_placement_scenarios(first_pitch_height, first_pitch_width,
+                                 left_foot_profile, right_foot_profile):
+    average_x_e = 0
+    average_y_e = 0
+    average_a_e = 0
+
+    time_step = 0.1  # Seconds
+    time_steps = np.arange(0, total_time + time_step, time_step)
+    number_of_time_stamps = len(time_steps)
+    foot_height, foot_width = left_foot_profile.shape
+    left_foot_start = round(foot_width / 2)
+    right_foot_end = (1000 * rescaled_mat_size[1]) - round(foot_width / 2)
+    left_foot_gradient = 2 * (left_foot_centre[1] - left_foot_start) / total_time
+    right_foot_gradient = 2 * (right_foot_end - right_foot_centre[1]) / total_time
+
+    for t in time_steps:
+        if t < total_time / 2:
+            left_foot_position = (left_foot_centre[0], left_foot_gradient * t + left_foot_start)
+            right_foot_position = right_foot_centre
+        else:
+            left_foot_position = left_foot_centre
+            right_foot_position = (right_foot_centre[0], right_foot_gradient * t
+                                   + 2 * right_foot_centre[1] - right_foot_end)
+
+        high_res_matrix = move_feet(left_foot_position, right_foot_position,
+                                    left_foot_profile, right_foot_profile, high_res_resolution)
+
+        low_res_matrix = create_low_res_mat(sensor_heights, sensor_widths,
+                                            sensor_heights, sensor_widths, high_res_matrix)
+        # make resize
+        resized_low_res_matrix = np.repeat(
+            np.repeat(low_res_matrix, round(high_res_resolution[0] / resolution[0]), axis=0),
+            round(high_res_resolution[1] / resolution[1]), axis=1)
+
+        # plot_heatmap(resized_low_res_matrix)
+
+        left_half = resized_low_res_matrix.copy()
+        right_half = resized_low_res_matrix.copy()
+        left_half[:, round(resized_low_res_matrix.shape[1] / 2):] = 0
+        right_half[:, :round(resized_low_res_matrix.shape[1] / 2)] = 0
+        best_location_left = fit_profile(left_half, left_foot_profile,
+                                         first_pitch_width, first_pitch_height)
+        best_location_right = fit_profile(right_half, right_foot_profile,
+                                          first_pitch_width, first_pitch_height)
+        estimated_matrix = move_feet(best_location_left, best_location_right,
+                                     left_foot_profile, right_foot_profile, high_res_resolution)
+
+        estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
+        x_e = 100 * abs((real_x - estimated_x) / real_x)
+        y_e = 100 * abs((real_y - estimated_y) / real_y)
+        a_e = np.sqrt(x_e ** 2 + y_e ** 2)
+
+        average_x_e += x_e
+        average_y_e += y_e
+        average_a_e += a_e
+    average_x_e /= number_of_time_stamps
+    average_y_e /= number_of_time_stamps
+    average_a_e /= number_of_time_stamps
+
+    # print("Average Errors x: %2.3f%%, y: %2.3f%%" % (average_x_e, average_y_e))
+    return average_a_e, average_x_e, average_y_e
 
 
 def create_animated_plot(heatmaps):
@@ -309,17 +372,19 @@ def subtract_matrices(big_matrix, small_matrix, start_row, start_col):
     return big_matrix
 
 
-def fit_profile(matrix, profile):
-    list_of_areas = []
+def fit_profile(matrix, profile, first_pitch_width, first_pitch_height):
+    list_of_total_pressures = []
     list_of_locations = []
     for i in range(0, matrix.shape[0] - profile.shape[0]):
         for j in range(0, matrix.shape[1] - profile.shape[1]):
             subtracted_matrix = subtract_matrices(matrix.copy(), profile.copy(), i, j)
-            list_of_areas.append(np.sum(subtracted_matrix))
+            list_of_total_pressures.append(np.sum(np.abs(subtracted_matrix)))
             list_of_locations.append((i + profile.shape[0] // 2, j + profile.shape[1] // 2))
-    minimum_area = min(list_of_areas)
-    best_location = list_of_locations[list_of_areas.index(minimum_area)]
-    return minimum_area, best_location
+    minimum_area = min(list_of_total_pressures)
+    best_location = list_of_locations[list_of_total_pressures.index(minimum_area)]
+    adjusted_best_location = (best_location[0] - 1000 * first_pitch_width / 2,
+                              best_location[1] - 1000 * first_pitch_height / 2)
+    return adjusted_best_location
 
 
 def create_area_map(matrix, threshold=0.0):
@@ -421,7 +486,7 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (16, 16)
+    resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
     pitch_step_size = 3
 
@@ -429,9 +494,9 @@ if __name__ == "__main__":
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
 
     # Base result
-    absolute_error, x_error, y_error = run_scenarios(sensor_heights, sensor_widths,
-                                                     sensor_heights, sensor_widths,
-                                                     user_mass, left_foot_profile, right_foot_profile, False)
+    absolute_error, x_error, y_error = run_layout_scenarios(sensor_heights, sensor_widths,
+                                                            sensor_heights, sensor_widths,
+                                                            user_mass, left_foot_profile, right_foot_profile, False)
 
     print("Absolute Error: %2.2f%%, X Error: %2.2f%%, Y Error: %2.2f%%" % (absolute_error, x_error, y_error))
     #plot_track_layout(sensor_heights, sensor_widths,
@@ -446,28 +511,25 @@ if __name__ == "__main__":
     resized_low_res_matrix = np.repeat(np.repeat(low_res_matrix, round(high_res_resolution[0] / resolution[0]), axis=0),
                                        round(high_res_resolution[1] / resolution[1]), axis=1)
 
-    plot_heatmap(resized_low_res_matrix)
-    # convert to 0s and 1s
-    low_res_area_matrix = create_area_map(resized_low_res_matrix, threshold=0.5)
-    left_foot_area = create_area_map(left_foot_profile, threshold=0.0001)
-    right_foot_area = create_area_map(right_foot_profile, threshold=0.0001)
+    # plot_heatmap(resized_low_res_matrix)
 
-    left_half = low_res_area_matrix.copy()
-    right_half = low_res_area_matrix.copy()
-    left_half[:, round(low_res_area_matrix.shape[1] / 2):] = 0
-    right_half[:, :round(low_res_area_matrix.shape[1] / 2)] = 0
-
-    minimum_area_left, best_location_left = fit_profile(left_half, left_foot_area)
-    minimum_area_right, best_location_right = fit_profile(right_half, right_foot_area)
+    left_half = resized_low_res_matrix.copy()
+    right_half = resized_low_res_matrix.copy()
+    left_half[:, round(resized_low_res_matrix.shape[1] / 2):] = 0
+    right_half[:, :round(resized_low_res_matrix.shape[1] / 2)] = 0
+    best_location_left = fit_profile(left_half, left_foot_profile,
+                                     sensor_widths[0], sensor_heights[0])
+    best_location_right = fit_profile(right_half, right_foot_profile,
+                                      sensor_widths[0], sensor_heights[0])
     estimated_matrix = move_feet(best_location_left, best_location_right,
                                  left_foot_profile, right_foot_profile, high_res_resolution)
 
     estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
     x_e = 100 * abs((real_x - estimated_x) / real_x)
     y_e = 100 * abs((real_y - estimated_y) / real_y)
-
-    print("Real CoP: (%2.2f, %2.2f)\nEstimated CoP: (%2.2f, %2.2f)\nError: (%2.2f%%, %2.2f%%)" %
-          (real_x, real_y, estimated_x, estimated_y, x_e, y_e))
+    a_e = np.sqrt(x_e ** 2 + y_e ** 2)
+    print("Real CoP: (%2.2f, %2.2f)\nEstimated CoP: (%2.2f, %2.2f)\nError: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" %
+          (real_x, real_y, estimated_x, estimated_y, a_e, x_e, y_e))
     plot_heatmap(estimated_matrix)
 
     '''
