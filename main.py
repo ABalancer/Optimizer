@@ -689,7 +689,7 @@ if __name__ == "__main__":
     print("\nOptimal Errors")
     print_errors(valid_errors[minimum_error_index][0], valid_errors[minimum_error_index][1],
                  valid_errors[minimum_error_index][2], valid_errors[minimum_error_index][3])
-    print(f"Optimal Heights: {valid_pitch_combinations[minimum_error_index][0]}\n"
+    print(f"\nOptimal Heights: {valid_pitch_combinations[minimum_error_index][0]}\n"
           f"Optimal Widths: {valid_pitch_combinations[minimum_error_index][1]}")
     save_layout(sensor_heights.tolist(), sensor_widths.tolist(),
                 valid_pitch_combinations[minimum_error_index][0],
