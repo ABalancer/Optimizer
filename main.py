@@ -519,13 +519,13 @@ def redistribute_y_pressure(matrix, cut_offs, mass):
 
 
 def print_errors(_absolute_error, _x_error, _y_error, _scenario_errors):
-    print("Side Weight Shift:  A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%"
+    print("Side Weight Shift:  A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%"
           % (_scenario_errors[0][0], _scenario_errors[0][1], _scenario_errors[0][2]))
-    print("Front Weight Shift: A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%"
+    print("Front Weight Shift: A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%"
           % (_scenario_errors[1][0], _scenario_errors[1][1], _scenario_errors[1][2]))
-    print("Foot slides:        A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%"
+    print("Foot slides:        A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%"
           % (_scenario_errors[2][0], _scenario_errors[2][1], _scenario_errors[2][2]))
-    print("Average:            A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%" % (_absolute_error, _x_error, _y_error))
+    print("Average:            A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%" % (_absolute_error, _x_error, _y_error))
 
 
 if __name__ == "__main__":
