@@ -460,8 +460,6 @@ def redistribute_y_pressure(matrix, cut_offs, mass):
     adjusted_matrix = matrix.copy()
     upper_bound = round(cut_offs[1] * adjusted_matrix.shape[0])
     lower_bound = round(cut_offs[0] * adjusted_matrix.shape[0])
-    print(cut_offs)
-    print(adjusted_matrix.shape)
     if lower_bound > 0:
         for i in range(0, lower_bound, 1):
             for j in range(0, adjusted_matrix.shape[1]):
@@ -520,14 +518,43 @@ if __name__ == "__main__":
                                                             False)
 
     print("Absolute Error: %2.2f%%, X Error: %2.2f%%, Y Error: %2.2f%%" % (absolute_error, x_error, y_error))
+    #
+    conductor_heights = sensor_heights
+    conductor_widths = sensor_widths
+    pitch_heights = sensor_heights
+    pitch_widths = sensor_widths
+    piezo = False
+    #
+    average_x_e = 0
+    average_y_e = 0
 
-    x_CoP, y_CoP = centre_of_pressure(left_foot_profile)
-    desired_y_CoP = left_foot_profile.shape[0] * 1/3
-    desired_x_CoP = x_CoP
-    delta_x_CoP = desired_x_CoP - x_CoP
-    delta_y_CoP = desired_y_CoP - y_CoP
-    shifted_pressure = redistribute_y_pressure(left_foot_profile, (0, 1/3), user_mass / 2)
-    plot_heatmap(shifted_pressure)
+    time_step = 0.1  # Seconds
+    time_steps = np.arange(0, total_time + time_step, time_step)
+    number_of_time_stamps = len(time_steps)
+    heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
+
+    for t in time_steps:
+        if t <= total_time / 2:
+            bottom_cut_off = 0
+            top_cut_off = 4 * t / 15 + 1 / 3
+        else:
+            bottom_cut_off = 4 / 15 * t - 2 / 3
+            top_cut_off = 1
+        left_foot = redistribute_y_pressure(left_foot_profile,
+                                            (bottom_cut_off, top_cut_off), user_mass / 2)
+        right_foot = redistribute_y_pressure(right_foot_profile,
+                                             (bottom_cut_off, top_cut_off), user_mass / 2)
+
+        high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
+                                            left_foot, right_foot, high_res_resolution)
+        x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+                                                       high_res_heatmap_matrix, piezo)
+
+        average_x_e += x_e
+        average_y_e += y_e
+        heatmaps[np.where(time_steps == t)] = adc_map
+    average_x_e /= number_of_time_stamps
+    average_y_e /= number_of_time_stamps
 
     '''
     a_e, x_e, y_e = run_footprint_placement_scenarios(sensor_heights[0], sensor_widths[0],
