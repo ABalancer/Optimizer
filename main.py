@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import constants
+from scipy.ndimage import shift
 import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -455,6 +456,24 @@ def open_layout(file_name):
     return layout_data
 
 
+def redistribute_y_pressure(matrix, cut_offs, mass):
+    adjusted_matrix = matrix.copy()
+    upper_bound = round(cut_offs[1] * adjusted_matrix.shape[0])
+    lower_bound = round(cut_offs[0] * adjusted_matrix.shape[0])
+    print(cut_offs)
+    print(adjusted_matrix.shape)
+    if lower_bound > 0:
+        for i in range(0, lower_bound, 1):
+            for j in range(0, adjusted_matrix.shape[1]):
+                adjusted_matrix[i][j] = 0
+    if upper_bound < adjusted_matrix.shape[0]:
+        for i in range(upper_bound, adjusted_matrix.shape[0], 1):
+            for j in range(0, adjusted_matrix.shape[1]):
+                adjusted_matrix[i][j] = 0
+
+    return rescale_mass(adjusted_matrix, mass)
+
+
 if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
@@ -487,9 +506,9 @@ if __name__ == "__main__":
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (16, 16)
+    resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 3
+    pitch_step_size = 2
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
@@ -497,15 +516,25 @@ if __name__ == "__main__":
     # Base result
     absolute_error, x_error, y_error = run_layout_scenarios(sensor_heights, sensor_widths,
                                                             sensor_heights, sensor_widths,
-                                                            user_mass, left_foot_profile, right_foot_profile, False)
+                                                            user_mass, left_foot_profile, right_foot_profile,
+                                                            False)
 
     print("Absolute Error: %2.2f%%, X Error: %2.2f%%, Y Error: %2.2f%%" % (absolute_error, x_error, y_error))
 
+    x_CoP, y_CoP = centre_of_pressure(left_foot_profile)
+    desired_y_CoP = left_foot_profile.shape[0] * 1/3
+    desired_x_CoP = x_CoP
+    delta_x_CoP = desired_x_CoP - x_CoP
+    delta_y_CoP = desired_y_CoP - y_CoP
+    shifted_pressure = redistribute_y_pressure(left_foot_profile, (0, 1/3), user_mass / 2)
+    plot_heatmap(shifted_pressure)
+
+    '''
     a_e, x_e, y_e = run_footprint_placement_scenarios(sensor_heights[0], sensor_widths[0],
                                                       left_foot_profile, right_foot_profile)
     print("Error: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" % (a_e, x_e, y_e))
+    
 
-    '''
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
     minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
 
@@ -551,10 +580,10 @@ if __name__ == "__main__":
                 symmetry_list.append(round(rescaled_mat_size[1] - x_positions[-1] - x_min, round_precision))
                 if symmetry_list == symmetry_list[::-1]:
                     # Valid combination
-                    absolute_error, x_error, y_error = run_scenarios(sensor_heights,
-                                                                     sensor_widths, sensor_heights,
-                                                                     pitch_widths, user_mass,
-                                                                     left_foot_profile, right_foot_profile)
+                    absolute_error, x_error, y_error = run_layout_scenarios(sensor_heights,
+                                                                            sensor_widths, sensor_heights,
+                                                                            pitch_widths, user_mass,
+                                                                            left_foot_profile, right_foot_profile)
                     valid_count += 1
                     valid_combinations.append((sensor_heights, pitch_widths, x_error, y_error))
                     x_errors.append(x_error)
@@ -589,10 +618,10 @@ if __name__ == "__main__":
                 symmetry_list = pitch_heights.copy()
                 symmetry_list.append(round(rescaled_mat_size[0] - y_positions[-1] - y_min, round_precision))
                 if symmetry_list == symmetry_list[::-1]:
-                    absolute_error, x_error, y_error = run_scenarios(sensor_heights,
-                                                                     sensor_widths, pitch_heights,
-                                                                     pitch_widths, user_mass,
-                                                                     left_foot_profile, right_foot_profile)
+                    absolute_error, x_error, y_error = run_layout_scenarios(sensor_heights,
+                                                                            sensor_widths, pitch_heights,
+                                                                            pitch_widths, user_mass,
+                                                                            left_foot_profile, right_foot_profile)
                     valid_combinations.append((pitch_heights, pitch_widths, float(x_error), float(y_error)))
                     combination_errors.append(absolute_error)
                     valid_count += 1
