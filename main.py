@@ -348,17 +348,19 @@ def run_footprint_placement_scenarios(first_pitch_height, first_pitch_width,
     foot_height, foot_width = left_foot_profile.shape
     left_foot_start = round(foot_width / 2)
     right_foot_end = (1000 * rescaled_mat_size[1]) - round(foot_width / 2)
-    left_foot_gradient = 2 * (left_foot_centre[1] - left_foot_start) / total_time
-    right_foot_gradient = 2 * (right_foot_end - right_foot_centre[1]) / total_time
+    _left_foot_centre = (0.24, 0.168)  # in metres
+    _right_foot_centre = (0.24, 0.312)  # in metres
+    left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
+    right_foot_gradient = 2 * (right_foot_end - _right_foot_centre[1]) / total_time
 
     for t in time_steps:
         if t < total_time / 2:
-            left_foot_position = (left_foot_centre[0], left_foot_gradient * t + left_foot_start)
-            right_foot_position = right_foot_centre
+            left_foot_position = (_left_foot_centre[0], left_foot_gradient * t + left_foot_start)
+            right_foot_position = _right_foot_centre
         else:
-            left_foot_position = left_foot_centre
-            right_foot_position = (right_foot_centre[0], right_foot_gradient * t
-                                   + 2 * right_foot_centre[1] - right_foot_end)
+            left_foot_position = _left_foot_centre
+            right_foot_position = (_right_foot_centre[0], right_foot_gradient * t
+                                   + 2 * _right_foot_centre[1] - right_foot_end)
 
         high_res_matrix = move_feet(left_foot_position, right_foot_position,
                                     left_foot_profile, right_foot_profile, high_res_resolution)
@@ -538,8 +540,8 @@ if __name__ == "__main__":
     # create heatmap with both feet
     high_res_resolution = (512, 512)
     mat_size = (0.48, 0.48)  # in metres
-    left_foot_centre = (0.24, 0.168)  # in metres
-    right_foot_centre = (0.24, 0.312)  # in metres
+    left_foot_centre = (0.24, 0.12)  # in metres
+    right_foot_centre = (0.24, 0.36)  # in metres
 
     scale_factor = high_res_resolution[0] / mat_size[0] / 1000
     left_foot_centre = (round(left_foot_centre[0] * scale_factor * 1000),
@@ -554,15 +556,14 @@ if __name__ == "__main__":
 
     base_case = move_feet(left_foot_centre, right_foot_centre,
                           left_foot_profile, right_foot_profile, high_res_resolution)
-
     # Sensor parameters
     R0 = 0.2325  # resistance per metre squared
     k = 1.265535e-8
 
     # Simulation Settings
-    resolution = (4, 4)
+    resolution = (8, 8)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 2
+    pitch_step_size = 3
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
