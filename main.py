@@ -161,7 +161,7 @@ def rescale_mass(foot_profile, mass):
 
 
 def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map):
-    resolution = 4095
+    _resolution = 4095
     adc_map = np.zeros(force_map.shape, dtype=np.int16)
     for i in range(conductor_heights.shape[0]):
         for j in range(conductor_widths.shape[0]):
@@ -169,25 +169,28 @@ def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map):
             base_resistance = R0 / area
             divider_resistance = base_resistance / 5
             sensor_resistance = R0 * area / (R0 * k * force_map[i][j] + pow(area, 2))
-            offset = np.int16(np.floor(resolution * divider_resistance / (base_resistance + divider_resistance)))
-            adc_map[i][j] = np.int16(np.floor(
-                resolution * divider_resistance/(sensor_resistance + divider_resistance))) - offset
+            # add randomness here
+            # offset = np.int16(np.round(_resolution * divider_resistance / (base_resistance + divider_resistance)))
+            adc_result = np.int16(np.round(
+                _resolution * divider_resistance/(sensor_resistance + divider_resistance)))
+            restored_pressure = 1 / (R0 * k) * (R0 / (divider_resistance * (_resolution / adc_result - 1)) - area)
+            adc_map[i][j] = restored_pressure * area
 
     return adc_map
 
 
-def compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map, piezo=True):
+def compute_error_for_instance(conductor_heights, conductor_widths,
+                               pitch_heights, pitch_widths, force_map, piezo=False):
     # compute real CoP
     x_cop, y_cop = centre_of_pressure(force_map)
     x_cop /= 1000
     y_cop /= 1000
-    sensor_pressures = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map)
-    # plot_heatmap(sensor_pressures)
+    sensor_forces = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map)
     # compute estimated CoP
     if piezo:
-        adc_map = convert_force_to_adc(R0, k, conductor_heights, conductor_widths, sensor_pressures)
+        adc_map = convert_force_to_adc(R0, k, conductor_heights, conductor_widths, sensor_forces)
     else:
-        adc_map = sensor_pressures
+        adc_map = sensor_forces
     x_cop_e, y_cop_e = centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
                                                    adc_map)
 
@@ -572,7 +575,7 @@ if __name__ == "__main__":
     absolute_error, x_error, y_error, scenario_errors = run_layout_scenarios(sensor_heights, sensor_widths,
                                                                              sensor_heights, sensor_widths,
                                                                              user_mass, left_foot_profile,
-                                                                             right_foot_profile, False)
+                                                                             right_foot_profile, True)
 
     print("Base Errors")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
@@ -581,7 +584,7 @@ if __name__ == "__main__":
                                                       left_foot_profile, right_foot_profile)
     print("Error: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" % (a_e, x_e, y_e))
     '''
-
+    '''
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
     minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
 
@@ -700,7 +703,5 @@ if __name__ == "__main__":
                       valid_pitch_combinations[minimum_error_index][0],
                       valid_pitch_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1])
+    '''
 
-    '''
-    np.save("centre_of_pressure_results.npy", cop_values)
-    '''
