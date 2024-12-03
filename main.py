@@ -329,7 +329,7 @@ def run_layout_scenarios(conductor_heights, conductor_widths, pitch_heights, pit
                                                                     pitch_heights, pitch_widths, user_mass,
                                                                     left_foot_profile, right_foot_profile, piezo,
                                                                     random_map)
-    create_animated_plot(heatmaps)
+
     x_error_2, y_error_2, heatmaps = run_front_weight_shift_scenario(conductor_heights, conductor_widths,
                                                                      pitch_heights, pitch_widths, user_mass,
                                                                      left_foot_profile, right_foot_profile, piezo,
