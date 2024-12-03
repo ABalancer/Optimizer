@@ -168,19 +168,23 @@ def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map, 
             area = conductor_heights[i] * conductor_widths[j]
             base_resistance = R0 / area
             divider_resistance = base_resistance / 5
-            sensor_resistance = R0 * area / (R0 * k * force_map[i][j] + pow(area, 2))
             if random_map is None:
+                sensor_resistance = R0 * area / (R0 * k * force_map[i][j] + pow(area, 2))
                 adc_result = np.int16(np.round(
                     _resolution * divider_resistance/(sensor_resistance + divider_resistance)))
             else:
-                threshold = np.int16(np.round(_resolution * divider_resistance / (base_resistance + divider_resistance)
-                                              + ADC_RANDOM_OFFSET))
-                offset = np.int16(np.round(_resolution * divider_resistance / (base_resistance + divider_resistance)))
-                adc_result = np.int16(np.round(_resolution * divider_resistance/(sensor_resistance + divider_resistance)
-                                               + random_map[i][j]))
+                force = (force_map[i][j] / area + random_map[i][j]) * area
+                sensor_resistance = R0 * area / (R0 * k * force + pow(area, 2))
+                threshold_resistance = R0 * area / (R0 * k * FORCE_RANDOM_OFFSET * area + pow(area, 2))
+                adc_threshold = np.int16(np.round(_resolution * divider_resistance /
+                                                  (threshold_resistance + divider_resistance)))
+                adc_offset = np.int16(np.round(_resolution * divider_resistance /
+                                               (base_resistance + divider_resistance)))
+                adc_result = np.int16(np.round(_resolution * divider_resistance /
+                                               (sensor_resistance + divider_resistance)))
                 # removes random base offsets
-                if adc_result <= threshold:
-                    adc_result = offset
+                if adc_result <= adc_threshold:
+                    adc_result = adc_offset
             restored_pressure = 1 / (R0 * k) * (R0 / (divider_resistance * (_resolution / adc_result - 1)) - area)
             adc_map[i][j] = restored_pressure * area
 
@@ -247,22 +251,24 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
     left_foot_mass = user_mass / 2
     right_foot_mass = user_mass / 2
+    _left_foot_centre = (240, 150)  # in mm
+    _right_foot_centre = (240, 310)  # in mm
     temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
     temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
     foot_height, foot_width = left_foot_profile.shape
     left_foot_start = round(foot_width / 2)
     right_foot_end = (1000 * rescaled_mat_size[1]) - round(foot_width / 2)
-    left_foot_gradient = 2 * (left_foot_centre[1] - left_foot_start) / total_time
-    right_foot_gradient = 2 * (right_foot_end - right_foot_centre[1]) / total_time
+    left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
+    right_foot_gradient = 2 * (right_foot_end - _right_foot_centre[1]) / total_time
 
     for t in time_steps:
         if t < total_time / 2:
-            left_foot_position = (left_foot_centre[0], left_foot_gradient * t + left_foot_start)
-            right_foot_position = right_foot_centre
+            left_foot_position = (_left_foot_centre[0], left_foot_gradient * t + left_foot_start)
+            right_foot_position = _right_foot_centre
         else:
-            left_foot_position = left_foot_centre
-            right_foot_position = (right_foot_centre[0], right_foot_gradient * t
-                                   + 2 * right_foot_centre[1] - right_foot_end)
+            left_foot_position = _left_foot_centre
+            right_foot_position = (_right_foot_centre[0], right_foot_gradient * t
+                                   + 2 * _right_foot_centre[1] - right_foot_end)
 
         high_res_heatmap_matrix = move_feet(left_foot_position, right_foot_position,
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
@@ -323,7 +329,7 @@ def run_layout_scenarios(conductor_heights, conductor_widths, pitch_heights, pit
                                                                     pitch_heights, pitch_widths, user_mass,
                                                                     left_foot_profile, right_foot_profile, piezo,
                                                                     random_map)
-
+    create_animated_plot(heatmaps)
     x_error_2, y_error_2, heatmaps = run_front_weight_shift_scenario(conductor_heights, conductor_widths,
                                                                      pitch_heights, pitch_widths, user_mass,
                                                                      left_foot_profile, right_foot_profile, piezo,
@@ -462,35 +468,36 @@ def create_area_map(matrix, threshold=0.0):
     return area_matrix
 
 
-def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_height, matrix_width):
+def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_height, matrix_width,
+                      scale_factor):
     fig, ax = plt.subplots(figsize=(6, 6))
 
     # Draw the matrix boundary
-    matrix_rect = patches.Rectangle((0, 0), matrix_width, matrix_height, linewidth=1, edgecolor='black',
-                                    facecolor='none')
+    matrix_rect = patches.Rectangle((0, 0), matrix_width / scale_factor, matrix_height / scale_factor,
+                                    linewidth=1, edgecolor='black', facecolor='none')
     ax.add_patch(matrix_rect)
     track_x = -conductor_widths[0]
     track_y = -conductor_heights[0]
     # Draw each track as a rectangle centered on x_positions and y_positions
     for c_w, p_w in zip(conductor_widths, pitch_widths):
         # Calculate the bottom-left corner of each track
-        track_x += p_w + c_w
-        track_rect = patches.Rectangle((track_x, 0), c_w, matrix_height,
+        track_x += (p_w + c_w) / scale_factor
+        track_rect = patches.Rectangle((track_x, 0), c_w, matrix_height / scale_factor,
                                        linewidth=1, edgecolor="None", alpha=0.5, facecolor="orange")
         ax.add_patch(track_rect)
 
     for c_h, p_h in zip(conductor_heights, pitch_heights):
         # Calculate the bottom-left corner of each track
-        track_y += p_h + c_h
-        track_rect = patches.Rectangle((0, track_y), matrix_width, c_h,
+        track_y += (p_h + c_h) / scale_factor
+        track_rect = patches.Rectangle((0, track_y), matrix_width / scale_factor, c_h,
                                        linewidth=1, edgecolor="None", alpha=0.5, facecolor="orange")
         ax.add_patch(track_rect)
 
     # Set axis limits and labels
-    ax.set_xlim(-0.1, matrix_width + 0.1)
-    ax.set_ylim(-0.1, matrix_height + 0.1)
+    ax.set_xlim(-0.01, matrix_width / scale_factor + 0.01)
+    ax.set_ylim(-0.01, matrix_height / scale_factor + 0.01)
     ax.set_aspect('equal')
-    ax.set_title("Track Layout in Matrix")
+    ax.set_title("Track Layout")
     plt.xlabel("Width (m)")
     plt.ylabel("Height (m)")
     plt.grid(False)
@@ -534,17 +541,17 @@ def redistribute_y_pressure(matrix, cut_offs, mass):
 
 
 def print_errors(_absolute_error, _x_error, _y_error, _scenario_errors):
-    print("Side Weight Shift:  A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%"
+    print("Side Weight Shift:  A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%"
           % (_scenario_errors[0][0], _scenario_errors[0][1], _scenario_errors[0][2]))
-    print("Front Weight Shift: A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%"
+    print("Front Weight Shift: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%"
           % (_scenario_errors[1][0], _scenario_errors[1][1], _scenario_errors[1][2]))
-    print("Foot slides:        A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%"
+    print("Foot slides:        A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%"
           % (_scenario_errors[2][0], _scenario_errors[2][1], _scenario_errors[2][2]))
-    print("Average:            A: %4.2f%%, X: %4.2f%%, Y: %4.2f%%" % (_absolute_error, _x_error, _y_error))
+    print("Average:            A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (_absolute_error, _x_error, _y_error))
 
 
 if __name__ == "__main__":
-    np.random.seed(16)  # 9
+    np.random.seed(38)  # 9 26 38
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
     total_time = 5
@@ -557,14 +564,14 @@ if __name__ == "__main__":
     left_foot_centre = (0.24, 0.12)  # in metres
     right_foot_centre = (0.24, 0.36)  # in metres
 
-    scale_factor = high_res_resolution[0] / mat_size[0] / 1000
-    left_foot_centre = (round(left_foot_centre[0] * scale_factor * 1000),
-                        round(left_foot_centre[1] * scale_factor * 1000))
-    right_foot_centre = (round(right_foot_centre[0] * scale_factor * 1000),
-                         round(right_foot_centre[1] * scale_factor * 1000))
+    SCALE_FACTOR = high_res_resolution[0] / mat_size[0] / 1000
+    left_foot_centre = (round(left_foot_centre[0] * SCALE_FACTOR * 1000),
+                        round(left_foot_centre[1] * SCALE_FACTOR * 1000))
+    right_foot_centre = (round(right_foot_centre[0] * SCALE_FACTOR * 1000),
+                         round(right_foot_centre[1] * SCALE_FACTOR * 1000))
 
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
-    left_foot_profile = zoom(left_foot_profile, zoom=(scale_factor, scale_factor))
+    left_foot_profile = zoom(left_foot_profile, zoom=(SCALE_FACTOR, SCALE_FACTOR))
     left_foot_profile = rescale_mass(left_foot_profile, user_mass / 2)
     right_foot_profile = np.flip(left_foot_profile, axis=1)
 
@@ -576,33 +583,38 @@ if __name__ == "__main__":
 
     # Simulation Settings
     resolution = (8, 8)
-    ADC_RANDOM_OFFSET = 8.8725
-    random_map = np.random.uniform(-ADC_RANDOM_OFFSET, ADC_RANDOM_OFFSET, size=resolution)
-    rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
+    FORCE_RANDOM_OFFSET = 5000
+    random_map = np.random.uniform(-FORCE_RANDOM_OFFSET, FORCE_RANDOM_OFFSET, size=resolution)
+    rescaled_mat_size = (SCALE_FACTOR * mat_size[0], SCALE_FACTOR * mat_size[1])
     pitch_step_size = 2
 
-    sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
-    sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
+    sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
+    sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
+    pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
+    pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
 
     # Base result
     absolute_error, x_error, y_error, scenario_errors = run_layout_scenarios(sensor_heights, sensor_widths,
-                                                                             sensor_heights, sensor_widths,
+                                                                             pitch_heights, pitch_widths,
                                                                              user_mass, left_foot_profile,
                                                                              right_foot_profile, True, random_map)
 
     print("Base Errors")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
+    plot_track_layout(sensor_heights, sensor_widths,
+                      pitch_heights, pitch_widths,
+                      rescaled_mat_size[0], rescaled_mat_size[1],
+                      SCALE_FACTOR)
     '''
     a_e, x_e, y_e = run_footprint_placement_scenarios(sensor_heights[0], sensor_widths[0],
                                                       left_foot_profile, right_foot_profile)
     print("Error: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" % (a_e, x_e, y_e))
     '''
 
-    minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
-    minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
-
-    track_height = scale_factor * mat_size[0] / resolution[0] / 2
-    track_width = scale_factor * mat_size[1] / resolution[1] / 2
+    minimum_pitch_height = (rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0] / pitch_step_size
+    minimum_pitch_width = (rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1] / pitch_step_size
+    track_height = float(sensor_heights[0])
+    track_width = float(sensor_widths[0])
 
     x_min = track_width / 2
     x_max = rescaled_mat_size[1] - track_width / 2
@@ -649,7 +661,9 @@ if __name__ == "__main__":
                                                                                              pitch_widths,
                                                                                              user_mass,
                                                                                              left_foot_profile,
-                                                                                             right_foot_profile)
+                                                                                             right_foot_profile,
+                                                                                             True,
+                                                                                             random_map)
                     valid_count += 1
                     valid_pitch_combinations.append([sensor_heights, pitch_widths])
                     x_errors.append(x_error)
@@ -691,14 +705,15 @@ if __name__ == "__main__":
                                                                                              pitch_widths,
                                                                                              user_mass,
                                                                                              left_foot_profile,
-                                                                                             right_foot_profile)
+                                                                                             right_foot_profile,
+                                                                                             True,
+                                                                                             random_map)
                     valid_errors.append([absolute_error, x_error, y_error, scenario_errors])
                     valid_pitch_combinations.append([pitch_heights, pitch_widths])
                     combination_errors.append(absolute_error)
                     valid_count += 1
                     # print("Absolute Error: %2.2f%%, X Error: %2.2f%%, Y Error: %2.2f%%"
                     #       % (absolute_error, x_error, y_error))
-                    # print("Combinations: ", pitch_heights, pitch_widths)
     minimum_error = min(combination_errors)
     minimum_error_index = combination_errors.index(minimum_error)
 
@@ -715,4 +730,5 @@ if __name__ == "__main__":
     plot_track_layout(sensor_heights, sensor_widths,
                       valid_pitch_combinations[minimum_error_index][0],
                       valid_pitch_combinations[minimum_error_index][1],
-                      rescaled_mat_size[0], rescaled_mat_size[1])
+                      rescaled_mat_size[0], rescaled_mat_size[1],
+                      SCALE_FACTOR)
