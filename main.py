@@ -169,17 +169,17 @@ def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map, 
             base_resistance = R0 / area
             divider_resistance = base_resistance / 5
             sensor_resistance = R0 * area / (R0 * k * force_map[i][j] + pow(area, 2))
-            # add randomness here
             if random_map is None:
                 adc_result = np.int16(np.round(
                     _resolution * divider_resistance/(sensor_resistance + divider_resistance)))
             else:
-                offset = np.int16(np.round(_resolution * divider_resistance / (base_resistance + divider_resistance) +
-                                           ADC_RANDOM_OFFSET))
+                threshold = np.int16(np.round(_resolution * divider_resistance / (base_resistance + divider_resistance)
+                                              + ADC_RANDOM_OFFSET))
+                offset = np.int16(np.round(_resolution * divider_resistance / (base_resistance + divider_resistance)))
                 adc_result = np.int16(np.round(_resolution * divider_resistance/(sensor_resistance + divider_resistance)
                                                + random_map[i][j]))
-                # removes random offsets
-                if adc_result < offset:
+                # removes random base offsets
+                if adc_result <= threshold:
                     adc_result = offset
             restored_pressure = 1 / (R0 * k) * (R0 / (divider_resistance * (_resolution / adc_result - 1)) - area)
             adc_map[i][j] = restored_pressure * area
@@ -333,6 +333,7 @@ def run_layout_scenarios(conductor_heights, conductor_widths, pitch_heights, pit
                                                              pitch_heights, pitch_widths, user_mass,
                                                              left_foot_profile, right_foot_profile, piezo,
                                                              random_map)
+
     a_error_1 = compute_absolute_error(x_error_1, y_error_1)
     a_error_2 = compute_absolute_error(x_error_2, y_error_2)
     a_error_3 = compute_absolute_error(x_error_3, y_error_3)
@@ -543,6 +544,7 @@ def print_errors(_absolute_error, _x_error, _y_error, _scenario_errors):
 
 
 if __name__ == "__main__":
+    np.random.seed(16)  # 9
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
     total_time = 5
@@ -577,7 +579,7 @@ if __name__ == "__main__":
     ADC_RANDOM_OFFSET = 8.8725
     random_map = np.random.uniform(-ADC_RANDOM_OFFSET, ADC_RANDOM_OFFSET, size=resolution)
     rescaled_mat_size = (scale_factor * mat_size[0], scale_factor * mat_size[1])
-    pitch_step_size = 3
+    pitch_step_size = 2
 
     sensor_heights = np.array(resolution[0] * [scale_factor * mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [scale_factor * mat_size[1] / resolution[1] / 2])
@@ -595,7 +597,7 @@ if __name__ == "__main__":
                                                       left_foot_profile, right_foot_profile)
     print("Error: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" % (a_e, x_e, y_e))
     '''
-    '''
+
     minimum_pitch_height = scale_factor * mat_size[0] / resolution[0] / 2 / pitch_step_size
     minimum_pitch_width = scale_factor * mat_size[1] / resolution[1] / 2 / pitch_step_size
 
@@ -714,5 +716,3 @@ if __name__ == "__main__":
                       valid_pitch_combinations[minimum_error_index][0],
                       valid_pitch_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1])
-    '''
-
