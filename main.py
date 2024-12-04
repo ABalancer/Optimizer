@@ -252,7 +252,7 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     left_foot_mass = user_mass / 2
     right_foot_mass = user_mass / 2
     _left_foot_centre = (240, 150)  # in mm
-    _right_foot_centre = (240, 310)  # in mm
+    _right_foot_centre = (240, 330)  # in mm
     temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
     temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
     foot_height, foot_width = left_foot_profile.shape
@@ -367,8 +367,8 @@ def run_footprint_placement_scenarios(first_pitch_height, first_pitch_width,
     foot_height, foot_width = left_foot_profile.shape
     left_foot_start = round(foot_width / 2)
     right_foot_end = (1000 * rescaled_mat_size[1]) - round(foot_width / 2)
-    _left_foot_centre = (0.24, 0.168)  # in metres
-    _right_foot_centre = (0.24, 0.312)  # in metres
+    _left_foot_centre = (0.24, 0.150)  # in metres
+    _right_foot_centre = (0.24, 0.330)  # in metres
     left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
     right_foot_gradient = 2 * (right_foot_end - _right_foot_centre[1]) / total_time
 
@@ -442,14 +442,16 @@ def subtract_matrices(big_matrix, small_matrix, start_row, start_col):
     return big_matrix
 
 
-def fit_profile(matrix, profile, first_pitch_width, first_pitch_height):
+def fit_profile(matrix, profile, first_pitch_width, first_pitch_height, centre_x, centre_y):
     list_of_total_pressures = []
     list_of_locations = []
-    for i in range(0, matrix.shape[0] - profile.shape[0]):
-        for j in range(0, matrix.shape[1] - profile.shape[1]):
-            subtracted_matrix = subtract_matrices(matrix.copy(), profile.copy(), i, j)
+    centre_x = round(centre_x)
+    centre_y = round(centre_y)
+    for _i in range(0, matrix.shape[0] - profile.shape[0]):
+        for _j in range(0, matrix.shape[1] - profile.shape[1]):
+            subtracted_matrix = subtract_matrices(matrix.copy(), profile.copy(), _i, _j)
             list_of_total_pressures.append(np.sum(np.abs(subtracted_matrix)))
-            list_of_locations.append((i + profile.shape[0] // 2, j + profile.shape[1] // 2))
+            list_of_locations.append((_i + profile.shape[0] // 2, _j + profile.shape[1] // 2))
     minimum_area = min(list_of_total_pressures)
     best_location = list_of_locations[list_of_total_pressures.index(minimum_area)]
     adjusted_best_location = (best_location[0] - 1000 * first_pitch_width / 2,
@@ -529,13 +531,13 @@ def redistribute_y_pressure(matrix, cut_offs, mass):
     upper_bound = round(cut_offs[1] * adjusted_matrix.shape[0])
     lower_bound = round(cut_offs[0] * adjusted_matrix.shape[0])
     if lower_bound > 0:
-        for i in range(0, lower_bound, 1):
-            for j in range(0, adjusted_matrix.shape[1]):
-                adjusted_matrix[i][j] = 0
+        for _i in range(0, lower_bound, 1):
+            for _j in range(0, adjusted_matrix.shape[1]):
+                adjusted_matrix[_i][_j] = 0
     if upper_bound < adjusted_matrix.shape[0]:
-        for i in range(upper_bound, adjusted_matrix.shape[0], 1):
-            for j in range(0, adjusted_matrix.shape[1]):
-                adjusted_matrix[i][j] = 0
+        for _i in range(upper_bound, adjusted_matrix.shape[0], 1):
+            for _j in range(0, adjusted_matrix.shape[1]):
+                adjusted_matrix[_i][_j] = 0
 
     return rescale_mass(adjusted_matrix, mass)
 
