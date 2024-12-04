@@ -466,9 +466,9 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
             bottom_cut_off = 4 / 15 * t - 2 / 3
             top_cut_off = 1
         left_foot = redistribute_y_pressure(left_foot_profile,
-                                            (bottom_cut_off, top_cut_off), user_mass / 2)
+                                            (bottom_cut_off, top_cut_off), USER_MASS / 2)
         right_foot = redistribute_y_pressure(right_foot_profile,
-                                             (bottom_cut_off, top_cut_off), user_mass / 2)
+                                             (bottom_cut_off, top_cut_off), USER_MASS / 2)
 
         high_res_matrix = move_feet(_left_foot_centre, _right_foot_centre,
                                     left_foot, right_foot, high_res_resolution)
