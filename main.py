@@ -376,10 +376,6 @@ def create_big_map(_conductor_heights, _conductor_widths, _pitch_heights, _pitch
 
 def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pitch_heights, _pitch_widths,
                                       _left_foot_profile, _right_foot_profile):
-    average_x_e = 0
-    average_y_e = 0
-    average_a_e = 0
-
     first_pitch_height = _pitch_heights[0]
     first_pitch_width = _pitch_widths[0]
     time_step = 0.1  # Seconds
@@ -392,9 +388,12 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     _right_foot_centre = (240, 330)  # in mm
     left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
     right_foot_gradient = 2 * (right_foot_end - _right_foot_centre[1]) / total_time
-    # sliding foot
     animation_matrices = []
-    '''
+    fs_average_x_e = 0
+    fs_average_y_e = 0
+    fs_average_a_e = 0
+
+    # sliding foot
     for t in time_steps:
         if t < total_time / 2:
             left_foot_position = (_left_foot_centre[0], float(left_foot_gradient * t + left_foot_start))
@@ -440,22 +439,22 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         _a_e = compute_absolute_error(_x_e, _y_e)
         print("Instance Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (_a_e, _x_e, _y_e))
 
-        average_x_e += _x_e
-        average_y_e += _y_e
-        average_a_e += _a_e
+        fs_average_x_e += _x_e
+        fs_average_y_e += _y_e
+        fs_average_a_e += _a_e
         print("Time step: %3.1f/%3.1f" % (t, total_time))
-    average_x_e /= number_of_time_stamps
-    average_y_e /= number_of_time_stamps
-    average_a_e /= number_of_time_stamps
-    print("Sliding Foot: Average Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (average_a_e, average_x_e, average_y_e))
+    fs_average_x_e /= number_of_time_stamps
+    fs_average_y_e /= number_of_time_stamps
+    fs_average_a_e /= number_of_time_stamps
+    print("Sliding Foot: Average Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" %
+          (fs_average_a_e, fs_average_x_e, fs_average_y_e))
     create_animated_plot(animation_matrices)
-    '''
 
-    average_x_e = 0
-    average_y_e = 0
-    average_a_e = 0
+    fw_average_x_e = 0
+    fw_average_y_e = 0
+    fw_average_a_e = 0
     # front weight shift:
-    animation_matrices = []
+
     _left_foot_centre = (left_foot_centre[0], left_foot_centre[1])
     _right_foot_centre = (right_foot_centre[0], right_foot_centre[1])
     for t in time_steps:
@@ -506,23 +505,21 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         _a_e = compute_absolute_error(_x_e, _y_e)
         print("Instance Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (_a_e, _x_e, _y_e))
 
-        average_x_e += _x_e
-        average_y_e += _y_e
-        average_a_e += _a_e
+        fw_average_x_e += _x_e
+        fw_average_y_e += _y_e
+        fw_average_a_e += _a_e
         print("Time step: %3.1f/%3.1f" % (t, total_time))
-    average_x_e /= number_of_time_stamps
-    average_y_e /= number_of_time_stamps
-    average_a_e /= number_of_time_stamps
+    fw_average_x_e /= number_of_time_stamps
+    fw_average_y_e /= number_of_time_stamps
+    fw_average_a_e /= number_of_time_stamps
     print("Front Weight Shift: Average Errors: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" %
-          (average_a_e, average_x_e, average_y_e))
-    create_animated_plot(animation_matrices)
+          (fw_average_a_e, fw_average_x_e, fw_average_y_e))
+    #create_animated_plot(animation_matrices)
 
-    '''
     # Side weight shift
-    animation_matrices = []
-    average_x_e = 0
-    average_y_e = 0
-    average_a_e = 0
+    sw_average_x_e = 0
+    sw_average_y_e = 0
+    sw_average_a_e = 0
     for t in time_steps:
         left_foot_mass = USER_MASS / total_time * t
         right_foot_mass = USER_MASS - left_foot_mass
@@ -562,20 +559,23 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         _a_e = compute_absolute_error(_x_e, _y_e)
         print("Instance Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (_a_e, _x_e, _y_e))
 
-        average_x_e += _x_e
-        average_y_e += _y_e
-        average_a_e += _a_e
+        sw_average_x_e += _x_e
+        sw_average_y_e += _y_e
+        sw_average_a_e += _a_e
         print("Time step: %3.1f/%3.1f" % (t, total_time))
 
-    average_a_e /= number_of_time_stamps
-    average_x_e /= number_of_time_stamps
-    average_y_e /= number_of_time_stamps
+    sw_average_a_e /= number_of_time_stamps
+    sw_average_x_e /= number_of_time_stamps
+    sw_average_y_e /= number_of_time_stamps
     print("Side Weight Shift: Average Errors: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % 
-          (average_a_e, average_x_e, average_y_e))
-    create_animated_plot(animation_matrices)
+          (sw_average_a_e, sw_average_x_e, sw_average_y_e))
 
-    return average_a_e, average_x_e, average_y_e
-    '''
+    average_a_e = [sw_average_a_e, fw_average_a_e, fs_average_a_e]
+    average_x_e = [sw_average_x_e, fw_average_x_e, fs_average_x_e]
+    average_y_e = [sw_average_y_e, fw_average_y_e, fs_average_y_e]
+    _scenario_errors = [average_a_e, average_x_e, average_y_e]
+    return sum(average_a_e) / 3, sum(average_x_e) / 3, sum(average_y_e) / 3, _scenario_errors, animation_matrices
+
 
 def create_animated_plot(heatmaps):
     # Create real-time plot
@@ -776,12 +776,16 @@ if __name__ == "__main__":
     random_map = np.random.uniform(-FORCE_RANDOM_OFFSET, FORCE_RANDOM_OFFSET, size=resolution)
     rescaled_mat_size = (SCALE_FACTOR * mat_size[0], SCALE_FACTOR * mat_size[1])
     pitch_step_size = 2
-
+    '''
     sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
     pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
     pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
-
+    '''
+    sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
+    sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
+    pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
+    pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
     # plot_track_layout(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
     #                   rescaled_mat_size[1], rescaled_mat_size[0], SCALE_FACTOR)
     # Base result
@@ -792,14 +796,18 @@ if __name__ == "__main__":
 
     print("Base Errors")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
-    #plot_track_layout(sensor_heights, sensor_widths,
-    #                  pitch_heights, pitch_widths,
-    #                  rescaled_mat_size[0], rescaled_mat_size[1],
-    #                  SCALE_FACTOR)
-
-    a_e, x_e, y_e = run_footprint_placement_scenarios(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-                                                      left_foot_profile, right_foot_profile)
-    print("Error: (A: %2.2f%%, X: %2.2f%%, Y: %2.2f%%)" % (a_e, x_e, y_e))
+    '''
+    plot_track_layout(sensor_heights, sensor_widths,
+                      pitch_heights, pitch_widths,
+                      rescaled_mat_size[0], rescaled_mat_size[1],
+                      SCALE_FACTOR)
+    '''
+    a_e, x_e, y_e, scenario_errors, animation_frames = run_footprint_placement_scenarios(sensor_heights, sensor_widths,
+                                                                                         pitch_heights, pitch_widths,
+                                                                                         left_foot_profile,
+                                                                                         right_foot_profile)
+    print_errors(a_e, x_e, y_e, scenario_errors)
+    create_animated_plot(animation_frames)
 
     '''
     minimum_pitch_height = (rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0] / pitch_step_size
