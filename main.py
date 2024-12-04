@@ -609,7 +609,6 @@ def fit_profile(matrix, profile, buffer_columns, first_pitch_width=0, first_pitc
         centre_y = matrix.shape[0] // 2
     centre_x = round(centre_x)
     centre_y = round(centre_y)
-    print(centre_x, centre_y)
     top_left_x = centre_x - profile.shape[1] // 2
     top_left_y = centre_y - profile.shape[0] // 2
     x_edge = matrix.shape[1] - profile.shape[1]
