@@ -126,18 +126,18 @@ def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heigh
     return x_E, y_E
 
 
-def create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths, high_res_heatmap_matrix):
-    low_res_pressure_map = np.zeros((conductor_heights.shape[0], conductor_widths.shape[0]))
+def create_low_res_mat(_conductor_heights, _conductor_widths, _pitch_heights, _pitch_widths, high_res_heatmap_matrix):
+    low_res_pressure_map = np.zeros((_conductor_heights.shape[0], _conductor_widths.shape[0]))
 
-    height_midpoint = conductor_heights[0] / 2
+    height_midpoint = _conductor_heights[0] / 2
     for i in range(0, resolution[0]):
-        width_midpoint = conductor_widths[0] / 2
+        width_midpoint = _conductor_widths[0] / 2
         for j in range(0, resolution[1]):
             low_res_pressure_map[i][j] = sum_square_section(high_res_heatmap_matrix,
                                                             (height_midpoint, width_midpoint),
-                                                            conductor_widths[j], conductor_heights[i])
-            width_midpoint += conductor_widths[j - 1] / 2 + pitch_widths[j] + conductor_widths[j] / 2
-        height_midpoint += conductor_heights[i - 1] / 2 + pitch_heights[i] + conductor_heights[i] / 2
+                                                            _conductor_widths[j], _conductor_heights[i])
+            width_midpoint += _conductor_widths[j - 1] / 2 + _pitch_widths[j] + _conductor_widths[j] / 2
+        height_midpoint += _conductor_heights[i - 1] / 2 + _pitch_heights[i] + _conductor_heights[i] / 2
 
     return low_res_pressure_map
 
@@ -375,7 +375,7 @@ def create_big_map(_conductor_heights, _conductor_widths, _pitch_heights, _pitch
 
 
 def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pitch_heights, _pitch_widths,
-                                      _left_foot_profile, _right_foot_profile):
+                                      _left_foot_profile, _right_foot_profile, piezo):
     if np.all(_pitch_heights == _pitch_heights[0]):
         first_pitch_height = _pitch_heights[0]
     else:
@@ -413,8 +413,8 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
                                     _left_foot_profile, _right_foot_profile, high_res_resolution)
         real_x, real_y = centre_of_pressure(high_res_matrix)
 
-        low_res_matrix = create_low_res_mat(_conductor_heights, _conductor_widths,
-                                            _pitch_heights, _pitch_widths, high_res_matrix)
+        _, _, low_res_matrix = compute_error_for_instance(_conductor_heights, _conductor_widths, _pitch_heights,
+                                                          _pitch_widths, high_res_matrix, piezo, RANDOM_MAP)
 
         resized_low_res_matrix = create_big_map(_conductor_heights, _conductor_widths, _pitch_heights, _pitch_widths,
                                                 low_res_matrix)
@@ -476,8 +476,8 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
 
         real_x, real_y = centre_of_pressure(high_res_matrix)
 
-        low_res_matrix = create_low_res_mat(_conductor_heights, _conductor_widths,
-                                            _pitch_heights, _pitch_widths, high_res_matrix)
+        _, _, low_res_matrix = compute_error_for_instance(_conductor_heights, _conductor_widths, _pitch_heights,
+                                                          _pitch_widths, high_res_matrix, piezo, RANDOM_MAP)
         resized_low_res_matrix = create_big_map(_conductor_heights, _conductor_widths, _pitch_heights, _pitch_widths,
                                                 low_res_matrix)
 
@@ -528,8 +528,8 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         high_res_matrix = move_feet(left_foot_centre, right_foot_centre,
                                     temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
         real_x, real_y = centre_of_pressure(high_res_matrix)
-        low_res_matrix = create_low_res_mat(_conductor_heights, _conductor_widths, pitch_heights, pitch_widths,
-                                            high_res_matrix)
+        _, _, low_res_matrix = compute_error_for_instance(_conductor_heights, _conductor_widths, _pitch_heights,
+                                                          _pitch_widths, high_res_matrix, piezo, RANDOM_MAP)
         resized_low_res_matrix = create_big_map(_conductor_heights, _conductor_widths, _pitch_heights, _pitch_widths,
                                                 low_res_matrix)
 
@@ -609,11 +609,12 @@ def fit_profile(matrix, profile, buffer_columns, first_pitch_width=0, first_pitc
         centre_y = matrix.shape[0] // 2
     centre_x = round(centre_x)
     centre_y = round(centre_y)
+    print(centre_x, centre_y)
     top_left_x = centre_x - profile.shape[1] // 2
     top_left_y = centre_y - profile.shape[0] // 2
     x_edge = matrix.shape[1] - profile.shape[1]
     y_edge = matrix.shape[0] - profile.shape[0]
-    radius = 50
+    radius = 60
     x_search_lower = top_left_x - radius
     y_search_lower = top_left_y - radius
     x_search_upper = top_left_x + radius
@@ -772,16 +773,16 @@ if __name__ == "__main__":
     # Simulation Settings
     resolution = (8, 8)
     FORCE_RANDOM_OFFSET = 10000
-    random_map = np.random.uniform(-FORCE_RANDOM_OFFSET, FORCE_RANDOM_OFFSET, size=resolution)
+    RANDOM_MAP = np.random.uniform(-FORCE_RANDOM_OFFSET, FORCE_RANDOM_OFFSET, size=resolution)
     rescaled_mat_size = (SCALE_FACTOR * mat_size[0], SCALE_FACTOR * mat_size[1])
     pitch_step_size = 2
 
     sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
-    pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
-    pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
-    #pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
-    #pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
+    #pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
+    #pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
+    pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
+    pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
     # plot_track_layout(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
     #                   rescaled_mat_size[1], rescaled_mat_size[0], SCALE_FACTOR)
     # Base result
@@ -789,7 +790,7 @@ if __name__ == "__main__":
                                                                              pitch_heights, pitch_widths,
                                                                              USER_MASS, left_foot_profile,
                                                                              right_foot_profile, True,
-                                                                             random_map)
+                                                                             RANDOM_MAP)
 
     print("Base Errors")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
@@ -802,7 +803,7 @@ if __name__ == "__main__":
     a_e, x_e, y_e, scenario_errors, animation_frames = run_footprint_placement_scenarios(sensor_heights, sensor_widths,
                                                                                          pitch_heights, pitch_widths,
                                                                                          left_foot_profile,
-                                                                                         right_foot_profile)
+                                                                                         right_foot_profile, True)
     print_errors(a_e, x_e, y_e, scenario_errors)
     create_animated_plot(animation_frames)
 
