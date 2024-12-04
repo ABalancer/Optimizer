@@ -393,6 +393,7 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
     right_foot_gradient = 2 * (right_foot_end - _right_foot_centre[1]) / total_time
     # sliding foot
+    animation_matrices = []
     '''
     for t in time_steps:
         if t < total_time / 2:
@@ -432,7 +433,7 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         new_high_resolution = (high_res_resolution[0], high_res_resolution[1] + buffer_columns)
         estimated_matrix = move_feet(best_location_left, best_location_right,
                                      _left_foot_profile, _right_foot_profile, new_high_resolution)
-
+        animation_matrices.append(estimated_matrix)
         estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
         _x_e = 100 * abs((real_x - estimated_x) / real_x)
         _y_e = 100 * abs((real_y - estimated_y) / real_y)
@@ -446,13 +447,15 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
     average_a_e /= number_of_time_stamps
-    print("Average Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (average_a_e, average_x_e, average_y_e))
+    print("Sliding Foot: Average Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (average_a_e, average_x_e, average_y_e))
+    create_animated_plot(animation_matrices)
+    '''
     '''
     average_x_e = 0
     average_y_e = 0
     average_a_e = 0
-    print("Sliding Foot: Average Errors: A: %5.2f%%, X: %5.2f%%, y: %5.2f%%" % (average_a_e, average_x_e, average_y_e))
     # front weight shift:
+    animation_matrices = []
     _left_foot_centre = (left_foot_centre[0], left_foot_centre[1])
     _right_foot_centre = (right_foot_centre[0], right_foot_centre[1])
     high_res_matrices = []
@@ -497,7 +500,7 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         new_high_resolution = (high_res_resolution[0], high_res_resolution[1] + buffer_columns)
         estimated_matrix = move_feet(best_location_left, best_location_right,
                                      left_foot, right_foot, new_high_resolution)
-        high_res_matrices.append(estimated_matrix)
+        animation_matrices.append(estimated_matrix)
         estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
         _x_e = 100 * abs((real_x - estimated_x) / real_x)
         _y_e = 100 * abs((real_y - estimated_y) / real_y)
@@ -511,17 +514,18 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
     average_a_e /= number_of_time_stamps
-    print("Front Weight Shift: Average Errors: A: %5.2f%%, X: %5.2f%%, y: %5.2f%%" %
+    print("Front Weight Shift: Average Errors: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" %
           (average_a_e, average_x_e, average_y_e))
-    create_animated_plot(high_res_matrices)
+    create_animated_plot(animation_matrices)
     '''
     # Side weight shift
+    animation_matrices = []
     average_x_e = 0
     average_y_e = 0
     average_a_e = 0
     for t in time_steps:
-        left_foot_mass = user_mass / total_time * t
-        right_foot_mass = user_mass - left_foot_mass
+        left_foot_mass = USER_MASS / total_time * t
+        right_foot_mass = USER_MASS - left_foot_mass
         temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
         temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
         high_res_matrix = move_feet(left_foot_centre, right_foot_centre,
@@ -544,14 +548,14 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
 
         best_location_left = fit_profile(left_half.copy(), temp_left_foot_profile,
                                          first_pitch_width, first_pitch_height,
-                                         buffer_columns, centre_y=_left_foot_centre[0])
+                                         buffer_columns)
         best_location_right = fit_profile(right_half.copy(), temp_right_foot_profile,
                                           first_pitch_width, first_pitch_height,
-                                          buffer_columns, centre_y=_right_foot_centre[0])
+                                          buffer_columns)
         new_high_resolution = (high_res_resolution[0], high_res_resolution[1] + buffer_columns)
         estimated_matrix = move_feet(best_location_left, best_location_right,
                                      temp_left_foot_profile, temp_right_foot_profile, new_high_resolution)
-        high_res_matrices.append(estimated_matrix)
+        animation_matrices.append(estimated_matrix)
         estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
         _x_e = 100 * abs((real_x - estimated_x) / real_x)
         _y_e = 100 * abs((real_y - estimated_y) / real_y)
@@ -566,9 +570,10 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     average_a_e /= number_of_time_stamps
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
-    print("Side Weight Shift: Average Errors: A: %5.2f%%, X: %5.2f%%, y: %5.2f%%" % 
+    print("Side Weight Shift: Average Errors: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % 
           (average_a_e, average_x_e, average_y_e))
-    '''
+    create_animated_plot(animation_matrices)
+
     return average_a_e, average_x_e, average_y_e
 
 
@@ -599,13 +604,17 @@ def fit_profile(matrix, profile, first_pitch_width, first_pitch_height, buffer_c
         centre_x, _ = centre_of_pressure(matrix)
     if centre_y is None:
         _, centre_y = centre_of_pressure(matrix)
+    if np.isnan(centre_x):
+        centre_x = matrix.shape[1] // 2
+    if np.isnan(centre_y):
+        centre_y = matrix.shape[0] // 2
     centre_x = round(centre_x)
     centre_y = round(centre_y)
     top_left_x = centre_x - profile.shape[1] // 2
     top_left_y = centre_y - profile.shape[0] // 2
     x_edge = matrix.shape[1] - profile.shape[1]
     y_edge = matrix.shape[0] - profile.shape[0]
-    radius = 20
+    radius = 25
     x_search_lower = top_left_x - radius
     y_search_lower = top_left_y - radius
     x_search_upper = top_left_x + radius
@@ -630,6 +639,8 @@ def fit_profile(matrix, profile, first_pitch_width, first_pitch_height, buffer_c
     minimum_area = min(list_of_total_pressures)
     best_location = list_of_locations[list_of_total_pressures.index(minimum_area)]
     print("Movement within search radius:", centre_x - best_location[1], centre_y - best_location[0])
+    if minimum_area <= 0:
+        best_location = (matrix.shape[1] // 2, matrix.shape[0] // 2)
     adjusted_best_location = (best_location[0] - 1000 * first_pitch_width,
                               best_location[1] - 1000 * first_pitch_height - buffer_columns)
     return adjusted_best_location
@@ -733,7 +744,7 @@ if __name__ == "__main__":
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
     total_time = 5
-    user_mass = 80
+    USER_MASS = 80
     gravity = 9.81
 
     # create heatmap with both feet
@@ -750,7 +761,7 @@ if __name__ == "__main__":
 
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
     left_foot_profile = zoom(left_foot_profile, zoom=(SCALE_FACTOR, SCALE_FACTOR))
-    left_foot_profile = rescale_mass(left_foot_profile, user_mass / 2)
+    left_foot_profile = rescale_mass(left_foot_profile, USER_MASS / 2)
     right_foot_profile = np.flip(left_foot_profile, axis=1)
 
     base_case = move_feet(left_foot_centre, right_foot_centre,
@@ -776,7 +787,7 @@ if __name__ == "__main__":
     # Base result
     absolute_error, x_error, y_error, scenario_errors = run_layout_scenarios(sensor_heights, sensor_widths,
                                                                              pitch_heights, pitch_widths,
-                                                                             user_mass, left_foot_profile,
+                                                                             USER_MASS, left_foot_profile,
                                                                              right_foot_profile, True, random_map)
 
     print("Base Errors")
