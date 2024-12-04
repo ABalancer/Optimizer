@@ -450,7 +450,7 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     print("Sliding Foot: Average Error: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" % (average_a_e, average_x_e, average_y_e))
     create_animated_plot(animation_matrices)
     '''
-    '''
+
     average_x_e = 0
     average_y_e = 0
     average_a_e = 0
@@ -458,7 +458,6 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     animation_matrices = []
     _left_foot_centre = (left_foot_centre[0], left_foot_centre[1])
     _right_foot_centre = (right_foot_centre[0], right_foot_centre[1])
-    high_res_matrices = []
     for t in time_steps:
         if t <= total_time / 2:
             bottom_cut_off = 0
@@ -517,6 +516,7 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     print("Front Weight Shift: Average Errors: A: %5.2f%%, X: %5.2f%%, Y: %5.2f%%" %
           (average_a_e, average_x_e, average_y_e))
     create_animated_plot(animation_matrices)
+
     '''
     # Side weight shift
     animation_matrices = []
@@ -575,7 +575,7 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     create_animated_plot(animation_matrices)
 
     return average_a_e, average_x_e, average_y_e
-
+    '''
 
 def create_animated_plot(heatmaps):
     # Create real-time plot
@@ -614,7 +614,7 @@ def fit_profile(matrix, profile, first_pitch_width, first_pitch_height, buffer_c
     top_left_y = centre_y - profile.shape[0] // 2
     x_edge = matrix.shape[1] - profile.shape[1]
     y_edge = matrix.shape[0] - profile.shape[0]
-    radius = 25
+    radius = 50
     x_search_lower = top_left_x - radius
     y_search_lower = top_left_y - radius
     x_search_upper = top_left_x + radius
