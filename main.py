@@ -9,6 +9,9 @@ import json
 from scipy.ndimage import zoom
 
 
+# the average errors can be incorrect sometimes
+
+
 def sum_square_section(matrix, midpoint, row_length, col_length):
     row_length *= 1000
     col_length *= 1000
@@ -778,10 +781,10 @@ if __name__ == "__main__":
 
     sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
-    #pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
-    #pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
-    pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
-    pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
+    pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
+    pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
+    #pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
+    #pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
     # plot_track_layout(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
     #                   rescaled_mat_size[1], rescaled_mat_size[0], SCALE_FACTOR)
     # Base result
