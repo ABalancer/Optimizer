@@ -660,7 +660,7 @@ def create_area_map(matrix, threshold=0.0):
 
 
 def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_height, matrix_width,
-                      scale_factor):
+                      scale_factor, plot_title):
     fig, ax = plt.subplots(figsize=(6, 6))
 
     # Draw the matrix boundary
@@ -688,7 +688,7 @@ def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_
     ax.set_xlim(-0.01, matrix_width / scale_factor + 0.01)
     ax.set_ylim(-0.01, matrix_height / scale_factor + 0.01)
     ax.set_aspect('equal')
-    ax.set_title("Track Layout")
+    ax.set_title(plot_title)
     plt.xlabel("Width (m)")
     plt.ylabel("Height (m)")
     plt.grid(False)
@@ -781,12 +781,11 @@ if __name__ == "__main__":
 
     sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
-    pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
-    pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
-    #pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
-    #pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
-    # plot_track_layout(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-    #                   rescaled_mat_size[1], rescaled_mat_size[0], SCALE_FACTOR)
+    #pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
+    #pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
+    pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
+    pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
+
     # Base result
     absolute_error, x_error, y_error, scenario_errors = run_layout_scenarios(sensor_heights, sensor_widths,
                                                                              pitch_heights, pitch_widths,
@@ -794,14 +793,11 @@ if __name__ == "__main__":
                                                                              right_foot_profile, True,
                                                                              RANDOM_MAP)
 
-    print("Base Errors")
+    print("Default Errors")
+    plot_track_layout(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
+                      rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR, "Default Track Geometry")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
-    '''
-    plot_track_layout(sensor_heights, sensor_widths,
-                      pitch_heights, pitch_widths,
-                      rescaled_mat_size[0], rescaled_mat_size[1],
-                      SCALE_FACTOR)
-    '''
+    '''    
     a_e, x_e, y_e, scenario_errors, animation_frames = run_footprint_placement_scenarios(sensor_heights, sensor_widths,
                                                                                          pitch_heights, pitch_widths,
                                                                                          left_foot_profile,
@@ -858,11 +854,11 @@ if __name__ == "__main__":
                                                                                              sensor_widths,
                                                                                              sensor_heights,
                                                                                              pitch_widths,
-                                                                                             user_mass,
+                                                                                             USER_MASS,
                                                                                              left_foot_profile,
                                                                                              right_foot_profile,
                                                                                              True,
-                                                                                             random_map)
+                                                                                             RANDOM_MAP)
                     valid_count += 1
                     valid_pitch_combinations.append([sensor_heights, pitch_widths])
                     x_errors.append(x_error)
@@ -902,11 +898,11 @@ if __name__ == "__main__":
                                                                                              sensor_widths,
                                                                                              pitch_heights,
                                                                                              pitch_widths,
-                                                                                             user_mass,
+                                                                                             USER_MASS,
                                                                                              left_foot_profile,
                                                                                              right_foot_profile,
                                                                                              True,
-                                                                                             random_map)
+                                                                                             RANDOM_MAP)
                     valid_errors.append([absolute_error, x_error, y_error, scenario_errors])
                     valid_pitch_combinations.append([pitch_heights, pitch_widths])
                     combination_errors.append(absolute_error)
@@ -930,5 +926,5 @@ if __name__ == "__main__":
                       valid_pitch_combinations[minimum_error_index][0],
                       valid_pitch_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1],
-                      SCALE_FACTOR)
-    '''
+                      SCALE_FACTOR, "Optimal Track Geometry")
+
