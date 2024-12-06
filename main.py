@@ -742,6 +742,7 @@ def print_errors(_absolute_error, _x_error, _y_error, _scenario_errors):
 
 
 if __name__ == "__main__":
+    plt.rcParams.update({'font.size': 16})  # Default font size for all elements
     np.random.seed(38)  # 9 26 38
     # Load the array back from the .npy file
     # Scale the force_map values to represent a realistic user weight.
