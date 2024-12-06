@@ -774,7 +774,7 @@ if __name__ == "__main__":
 
     # Simulation Settings
     resolution = (8, 8)
-    FORCE_RANDOM_OFFSET = 10000
+    FORCE_RANDOM_OFFSET = 10000 * 64 / (resolution[0] * resolution[1])
     RANDOM_MAP = np.random.uniform(-FORCE_RANDOM_OFFSET, FORCE_RANDOM_OFFSET, size=resolution)
     rescaled_mat_size = (SCALE_FACTOR * mat_size[0], SCALE_FACTOR * mat_size[1])
     pitch_step_size = 2
