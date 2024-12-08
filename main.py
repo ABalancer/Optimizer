@@ -297,9 +297,9 @@ def run_front_weight_shift_scenario(conductor_heights, conductor_widths, pitch_h
     for t in time_steps:
         if t <= total_time / 2:
             bottom_cut_off = 0
-            top_cut_off = 4 * t / 15 + 1 / 3
+            top_cut_off = 4 * t / (3 * total_time) + 1 / 3
         else:
-            bottom_cut_off = 4 / 15 * t - 2 / 3
+            bottom_cut_off = 4 / (3 * total_time) * t - 2 / 3
             top_cut_off = 1
         left_foot = redistribute_y_pressure(left_foot_profile,
                                             (bottom_cut_off, top_cut_off), user_mass / 2)
@@ -465,9 +465,9 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     for t in time_steps:
         if t <= total_time / 2:
             bottom_cut_off = 0
-            top_cut_off = 4 * t / 15 + 1 / 3
+            top_cut_off = 4 * t / (3 * total_time) + 1 / 3
         else:
-            bottom_cut_off = 4 / 15 * t - 2 / 3
+            bottom_cut_off = 4 / (3 * total_time) * t - 2 / 3
             top_cut_off = 1
         left_foot = redistribute_y_pressure(left_foot_profile,
                                             (bottom_cut_off, top_cut_off), USER_MASS / 2)
@@ -727,7 +727,6 @@ def redistribute_y_pressure(matrix, cut_offs, mass):
         for _i in range(upper_bound, adjusted_matrix.shape[0], 1):
             for _j in range(0, adjusted_matrix.shape[1]):
                 adjusted_matrix[_i][_j] = 0
-
     return rescale_mass(adjusted_matrix, mass)
 
 
@@ -764,7 +763,9 @@ if __name__ == "__main__":
 
     left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
     left_foot_profile = zoom(left_foot_profile, zoom=(SCALE_FACTOR, SCALE_FACTOR))
+
     left_foot_profile = rescale_mass(left_foot_profile, USER_MASS / 2)
+
     right_foot_profile = np.flip(left_foot_profile, axis=1)
 
     base_case = move_feet(left_foot_centre, right_foot_centre,
@@ -798,13 +799,14 @@ if __name__ == "__main__":
     plot_track_layout(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
                       rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR, "Default Track Geometry")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
-    '''    
+
     a_e, x_e, y_e, scenario_errors, animation_frames = run_footprint_placement_scenarios(sensor_heights, sensor_widths,
                                                                                          pitch_heights, pitch_widths,
                                                                                          left_foot_profile,
                                                                                          right_foot_profile, True)
     print_errors(a_e, x_e, y_e, scenario_errors)
     create_animated_plot(animation_frames)
+
 
     '''
     minimum_pitch_height = (rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0] / pitch_step_size
@@ -928,4 +930,4 @@ if __name__ == "__main__":
                       valid_pitch_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1],
                       SCALE_FACTOR, "Optimal Track Geometry")
-
+    '''
