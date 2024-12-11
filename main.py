@@ -219,6 +219,7 @@ def run_side_weight_shift_scenario(conductor_heights, conductor_widths, pitch_he
     time_steps = np.arange(0, total_time + time_step, time_step)
     number_of_time_stamps = len(time_steps)
     heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
+    cop_data = np.zeros((number_of_time_stamps, 2))
 
     for t in time_steps:
         left_foot_mass = user_mass / total_time * t
@@ -231,7 +232,11 @@ def run_side_weight_shift_scenario(conductor_heights, conductor_widths, pitch_he
                                                        high_res_heatmap_matrix, piezo, random_map)
         average_x_e += x_e
         average_y_e += y_e
+
         heatmaps[np.where(time_steps == t)] = adc_map
+        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
+        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
+    np.savetxt('SideWeightShift.csv', cop_data, delimiter=',')
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
 
@@ -274,11 +279,12 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
         x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
                                                        high_res_heatmap_matrix, piezo, random_map)
-        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
-        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
         average_x_e += x_e
         average_y_e += y_e
+
         heatmaps[np.where(time_steps == t)] = adc_map
+        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
+        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
     np.savetxt('SlidingFoot.csv', cop_data, delimiter=',')
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
@@ -297,6 +303,7 @@ def run_front_weight_shift_scenario(conductor_heights, conductor_widths, pitch_h
     number_of_time_stamps = len(time_steps)
     heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
 
+    cop_data = np.zeros((number_of_time_stamps, 2))
     for t in time_steps:
         if t <= total_time / 2:
             bottom_cut_off = 0
@@ -313,10 +320,13 @@ def run_front_weight_shift_scenario(conductor_heights, conductor_widths, pitch_h
                                             left_foot, right_foot, high_res_resolution)
         x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
                                                        high_res_heatmap_matrix, piezo, random_map)
-
         average_x_e += x_e
         average_y_e += y_e
+
         heatmaps[np.where(time_steps == t)] = adc_map
+        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
+        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
+    np.savetxt('FrontWeightShift.csv', cop_data, delimiter=',')
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
     return average_x_e, average_y_e, heatmaps
