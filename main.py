@@ -260,6 +260,7 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
     right_foot_gradient = 2 * (right_foot_end - _right_foot_centre[1]) / total_time
 
+    cop_data = np.zeros((number_of_time_stamps, 2))
     for t in time_steps:
         if t < total_time / 2:
             left_foot_position = (_left_foot_centre[0], left_foot_gradient * t + left_foot_start)
@@ -273,10 +274,12 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
         x_e, y_e, adc_map = compute_error_for_instance(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
                                                        high_res_heatmap_matrix, piezo, random_map)
-
+        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
+        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
         average_x_e += x_e
         average_y_e += y_e
         heatmaps[np.where(time_steps == t)] = adc_map
+    np.savetxt('SlidingFoot.csv', cop_data, delimiter=',')
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
 
@@ -800,15 +803,16 @@ if __name__ == "__main__":
                       rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR, "Default Track Geometry")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
 
+    '''
     a_e, x_e, y_e, scenario_errors, animation_frames = run_footprint_placement_scenarios(sensor_heights, sensor_widths,
                                                                                          pitch_heights, pitch_widths,
                                                                                          left_foot_profile,
                                                                                          right_foot_profile, True)
     print_errors(a_e, x_e, y_e, scenario_errors)
     create_animated_plot(animation_frames)
-
-
     '''
+
+
     minimum_pitch_height = (rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0] / pitch_step_size
     minimum_pitch_width = (rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1] / pitch_step_size
     track_height = float(sensor_heights[0])
@@ -930,4 +934,4 @@ if __name__ == "__main__":
                       valid_pitch_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1],
                       SCALE_FACTOR, "Optimal Track Geometry")
-    '''
+
