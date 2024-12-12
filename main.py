@@ -285,7 +285,7 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
         heatmaps[np.where(time_steps == t)] = adc_map
         cop_data[np.where(time_steps == t)[0][0]][0] = x_e
         cop_data[np.where(time_steps == t)[0][0]][1] = y_e
-    np.savetxt('SlidingFoot.csv', cop_data, delimiter=',')
+    np.savetxt('FootSlides.csv', cop_data, delimiter=',')
     average_x_e /= number_of_time_stamps
     average_y_e /= number_of_time_stamps
 
@@ -603,9 +603,9 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         cop_data_sw[np.where(time_steps == t)[0][0]][0] = _x_e
         cop_data_sw[np.where(time_steps == t)[0][0]][1] = _y_e
 
-    np.savetxt('SideWeightShift.csv', cop_data_sw, delimiter=',')
-    np.savetxt('FrontWeightShift.csv', cop_data_fw, delimiter=',')
-    np.savetxt('SlidingFoot.csv', cop_data_fs, delimiter=',')
+    np.savetxt('FittedSideWeightShift.csv', cop_data_sw, delimiter=',')
+    np.savetxt('FittedFrontWeightShift.csv', cop_data_fw, delimiter=',')
+    np.savetxt('FittedFootSlides.csv', cop_data_fs, delimiter=',')
 
     sw_average_a_e /= number_of_time_stamps
     sw_average_x_e /= number_of_time_stamps
@@ -658,7 +658,7 @@ def fit_profile(matrix, profile, buffer_columns, first_pitch_width=0, first_pitc
     top_left_y = centre_y - profile.shape[0] // 2
     x_edge = matrix.shape[1] - profile.shape[1]
     y_edge = matrix.shape[0] - profile.shape[0]
-    radius = 50
+    radius = 60
     x_search_lower = top_left_x - radius
     y_search_lower = top_left_y - radius
     x_search_upper = top_left_x + radius
@@ -688,8 +688,8 @@ def fit_profile(matrix, profile, buffer_columns, first_pitch_width=0, first_pitc
             best_location = (centre_y, centre_x)
         else:
             best_location = (matrix.shape[1] // 2, matrix.shape[0] // 2)
-    adjusted_best_location = (best_location[0],# - 1000 * first_pitch_width,
-                              best_location[1] - buffer_columns)  #- 1000 * first_pitch_height - buffer_columns)
+    adjusted_best_location = (best_location[0] - 1000 * first_pitch_width,
+                              best_location[1] - buffer_columns - 1000 * first_pitch_height)
     return adjusted_best_location
 
 
