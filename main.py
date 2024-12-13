@@ -686,7 +686,7 @@ def fit_profile(matrix, profile, buffer_columns, first_pitch_width=0, first_pitc
     top_left_y = centre_y - profile.shape[0] // 2
     x_edge = matrix.shape[1] - profile.shape[1]
     y_edge = matrix.shape[0] - profile.shape[0]
-    radius = 120
+    radius = 60
     x_search_lower = top_left_x - radius
     y_search_lower = top_left_y - radius
     x_search_upper = top_left_x + radius
@@ -706,7 +706,7 @@ def fit_profile(matrix, profile, buffer_columns, first_pitch_width=0, first_pitc
     for _i in range(y_search_lower, y_search_upper + 1, 1):
         for _j in range(x_search_lower, x_search_upper + 1, 1):
             subtracted_matrix = subtract_matrices(matrix.copy(), profile.copy(), _i, _j)
-            list_of_total_pressures.append(np.sum(np.absolute(subtracted_matrix)))
+            list_of_total_pressures.append(np.sum(subtracted_matrix ** 2))
             list_of_locations.append((_i + profile.shape[0] // 2, _j + profile.shape[1] // 2))
     minimum_area = min(list_of_total_pressures)
     best_location = list_of_locations[list_of_total_pressures.index(minimum_area)]
