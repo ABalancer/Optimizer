@@ -257,6 +257,8 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     right_foot_mass = user_mass / 2
     _left_foot_centre = (240, 150)  # in mm
     _right_foot_centre = (240, 330)  # in mm
+    _left_foot_centre = (round(_left_foot_centre[0] * SCALE_FACTOR), round(_left_foot_centre[1] * SCALE_FACTOR))
+    _right_foot_centre = (round(_right_foot_centre[0] * SCALE_FACTOR), round(_right_foot_centre[1] * SCALE_FACTOR))
     temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
     temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
     foot_height, foot_width = left_foot_profile.shape
@@ -408,6 +410,8 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     right_foot_end = (1000 * rescaled_mat_size[1]) - round(foot_width / 2)
     _left_foot_centre = (240, 150)  # in mm
     _right_foot_centre = (240, 330)  # in mm
+    _left_foot_centre = (round(_left_foot_centre[0] * SCALE_FACTOR), round(_left_foot_centre[1] * SCALE_FACTOR))
+    _right_foot_centre = (round(_right_foot_centre[0] * SCALE_FACTOR), round(_right_foot_centre[1] * SCALE_FACTOR))
     left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
     right_foot_gradient = 2 * (right_foot_end - _right_foot_centre[1]) / total_time
     animation_matrices = []
@@ -418,6 +422,13 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     cop_data_sw = np.zeros((number_of_time_stamps, 2))
     cop_data_fw = np.zeros((number_of_time_stamps, 2))
     cop_data_fs = np.zeros((number_of_time_stamps, 2))
+
+    fs_left = np.load("./Data/fs_left.npy")
+    fs_right = np.load("./Data/fs_right.npy")
+    fw_left = np.load("./Data/fw_left.npy")
+    fw_right = np.load("./Data/fw_right.npy")
+    sw_left = np.load("./Data/sw_left.npy")
+    sw_right = np.load("./Data/sw_right.npy")
 
     # sliding foot
     for t in time_steps:
@@ -448,19 +459,25 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         left_half = np.hstack((extra_columns, left_half, extra_columns))
         right_half = np.hstack((extra_columns, right_half, extra_columns))
         buffer_columns = extra_columns.shape[1]
+
         best_location_left = fit_profile(left_half.copy(), _left_foot_profile, buffer_columns,
                                          first_pitch_width, first_pitch_height,
-                                         left_foot_position[1] + buffer_columns, left_foot_position[0])
+                                         left_foot_position[1] + buffer_columns, #- fs_left[np.where(time_steps == t)][0][1],
+                                         left_foot_position[0]) # - fs_left[np.where(time_steps == t)][0][0])
         best_location_right = fit_profile(right_half.copy(), _right_foot_profile, buffer_columns,
                                           first_pitch_width, first_pitch_height,
-                                          right_foot_position[1] + buffer_columns, right_foot_position[0])
-        new_high_resolution = (high_res_resolution[0], high_res_resolution[1] + 2*buffer_columns)
-        estimated_matrix = move_feet((best_location_left[0], best_location_left[1] + buffer_columns),
-                                     (best_location_right[0], best_location_right[1] + buffer_columns),
+                                          right_foot_position[1] + buffer_columns, # - fs_right[np.where(time_steps == t)][0][1],
+                                          right_foot_position[0]) #- fs_right[np.where(time_steps == t)][0][0])
+        new_high_resolution = (high_res_resolution[0] + 2 * buffer_columns, high_res_resolution[1] + 2 * buffer_columns)
+        estimated_matrix = move_feet((best_location_left[0] + buffer_columns,
+                                      best_location_left[1] + buffer_columns),
+                                     (best_location_right[0] + buffer_columns, 
+                                      best_location_right[1] + buffer_columns),
                                      _left_foot_profile, _right_foot_profile, new_high_resolution)
         animation_matrices.append(estimated_matrix)
         estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
         estimated_x -= buffer_columns
+        estimated_y -= buffer_columns
         _x_e = 100 * abs((real_x - estimated_x) / real_x)
         _y_e = 100 * abs((real_y - estimated_y) / real_y)
         _a_e = compute_absolute_error(_x_e, _y_e)
@@ -517,19 +534,23 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
         left_half = np.hstack((extra_columns, left_half, extra_columns))
         right_half = np.hstack((extra_columns, right_half, extra_columns))
         buffer_columns = extra_columns.shape[1]
+
         best_location_left = fit_profile(left_half.copy(), left_foot, buffer_columns,
-                                         first_pitch_width, first_pitch_height, _left_foot_centre[1] + buffer_columns,
-                                         _left_foot_centre[0])
+                                         first_pitch_width, first_pitch_height, _left_foot_centre[1] + buffer_columns, #- fw_left[np.where(time_steps == t)][0][1],
+                                         _left_foot_centre[0]) #'- fw_left[np.where(time_steps == t)][0][0])
         best_location_right = fit_profile(right_half.copy(), right_foot, buffer_columns,
-                                          first_pitch_width, first_pitch_height, _right_foot_centre[1] + buffer_columns,
-                                          _right_foot_centre[0])
-        new_high_resolution = (high_res_resolution[0], high_res_resolution[1] + 2 * buffer_columns)
-        estimated_matrix = move_feet((best_location_left[0], best_location_left[1] + buffer_columns),
-                                     (best_location_right[0], best_location_right[1] + buffer_columns),
+                                          first_pitch_width, first_pitch_height, _right_foot_centre[1] + buffer_columns, #- fw_right[np.where(time_steps == t)][0][1],
+                                          _right_foot_centre[0]) #- fw_right[np.where(time_steps == t)][0][0])
+        new_high_resolution = (high_res_resolution[0] + 2 * buffer_columns, high_res_resolution[1] + 2 * buffer_columns)
+        estimated_matrix = move_feet((best_location_left[0] + buffer_columns,
+                                      best_location_left[1] + buffer_columns),
+                                     (best_location_right[0] + buffer_columns,
+                                      best_location_right[1] + buffer_columns),
                                      left_foot, right_foot, new_high_resolution)
         animation_matrices.append(estimated_matrix)
         estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
         estimated_x -= buffer_columns
+        estimated_y -= buffer_columns
         _x_e = 100 * abs((real_x - estimated_x) / real_x)
         _y_e = 100 * abs((real_y - estimated_y) / real_y)
         _a_e = compute_absolute_error(_x_e, _y_e)
@@ -549,6 +570,8 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
           (fw_average_a_e, fw_average_x_e, fw_average_y_e))
 
     # Side weight shift
+    _left_foot_centre = left_foot_centre
+    _right_foot_centre = right_foot_centre
     sw_average_x_e = 0
     sw_average_y_e = 0
     sw_average_a_e = 0
@@ -578,18 +601,23 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
 
         best_location_left = fit_profile(left_half.copy(), temp_left_foot_profile, buffer_columns,
                                          first_pitch_width, first_pitch_height,
-                                         _left_foot_centre[1] + buffer_columns, _left_foot_centre[0])
+                                         _left_foot_centre[1] + buffer_columns, #- sw_left[np.where(time_steps == t)][0][1],
+                                         _left_foot_centre[0]) #- sw_left[np.where(time_steps == t)][0][0])
         best_location_right = fit_profile(right_half.copy(), temp_right_foot_profile, buffer_columns,
                                           first_pitch_width, first_pitch_height,
-                                          _right_foot_centre[1] + buffer_columns, _left_foot_centre[0])
-        new_high_resolution = (high_res_resolution[0], high_res_resolution[1] + 2*buffer_columns)
-        estimated_matrix = move_feet((best_location_left[0], best_location_left[1] + buffer_columns),
-                                     (best_location_right[0], best_location_right[1] + buffer_columns),
+                                          _right_foot_centre[1] + buffer_columns, # - sw_right[np.where(time_steps == t)][0][1],
+                                          _right_foot_centre[0]) #- sw_right[np.where(time_steps == t)][0][0])
+        new_high_resolution = (high_res_resolution[0] + 2 * buffer_columns, high_res_resolution[1] + 2 * buffer_columns)
+        estimated_matrix = move_feet((best_location_left[0] + buffer_columns,
+                                      best_location_left[1] + buffer_columns),
+                                     (best_location_right[0] + buffer_columns,
+                                      best_location_right[1] + buffer_columns),
                                      temp_left_foot_profile, temp_right_foot_profile, new_high_resolution)
 
         animation_matrices.append(estimated_matrix)
         estimated_x, estimated_y = centre_of_pressure(estimated_matrix)
         estimated_x -= buffer_columns
+        estimated_y -= buffer_columns
         _x_e = 100 * abs((real_x - estimated_x) / real_x)
         _y_e = 100 * abs((real_y - estimated_y) / real_y)
         _a_e = compute_absolute_error(_x_e, _y_e)
@@ -658,7 +686,7 @@ def fit_profile(matrix, profile, buffer_columns, first_pitch_width=0, first_pitc
     top_left_y = centre_y - profile.shape[0] // 2
     x_edge = matrix.shape[1] - profile.shape[1]
     y_edge = matrix.shape[0] - profile.shape[0]
-    radius = 60
+    radius = 120
     x_search_lower = top_left_x - radius
     y_search_lower = top_left_y - radius
     x_search_upper = top_left_x + radius
@@ -851,7 +879,7 @@ if __name__ == "__main__":
                                                                                          left_foot_profile,
                                                                                          right_foot_profile, True)
     print_errors(a_e, x_e, y_e, scenario_errors)
-    create_animated_plot(animation_frames)
+    #create_animated_plot(animation_frames)
 
 
     '''
