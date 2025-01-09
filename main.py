@@ -434,7 +434,9 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     cop_data_sw = np.zeros((number_of_time_stamps, 2))
     cop_data_fw = np.zeros((number_of_time_stamps, 2))
     cop_data_fs = np.zeros((number_of_time_stamps, 2))
-
+    raw_data_sw = np.zeros((number_of_time_stamps, 4))
+    raw_data_fw = np.zeros((number_of_time_stamps, 4))
+    raw_data_fs = np.zeros((number_of_time_stamps, 4))
     fs_left = np.load("./Data/fs_left.npy")
     fs_right = np.load("./Data/fs_right.npy")
     fw_left = np.load("./Data/fw_left.npy")
@@ -502,6 +504,12 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
 
         cop_data_fs[np.where(time_steps == t)[0][0]][0] = _x_e
         cop_data_fs[np.where(time_steps == t)[0][0]][1] = _y_e
+
+        raw_results = [real_x, real_y, estimated_x, estimated_y]
+        for _i in range(len(raw_results)):
+            raw_data_fs[np.where(time_steps == t)[0][0]][_i] = raw_results[_i]
+    np.savetxt('FittedFootSlides.csv', raw_data_fs, delimiter=',')
+
     fs_average_x_e /= number_of_time_stamps
     fs_average_y_e /= number_of_time_stamps
     fs_average_a_e /= number_of_time_stamps
@@ -575,6 +583,11 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
 
         cop_data_fw[np.where(time_steps == t)[0][0]][0] = _x_e
         cop_data_fw[np.where(time_steps == t)[0][0]][1] = _y_e
+        raw_results = [real_x, real_y, estimated_x, estimated_y]
+        for _i in range(len(raw_results)):
+            raw_data_fw[np.where(time_steps == t)[0][0]][_i] = raw_results[_i]
+    np.savetxt('FittedFrontWeightShift.csv', raw_data_fw, delimiter=',')
+
     fw_average_x_e /= number_of_time_stamps
     fw_average_y_e /= number_of_time_stamps
     fw_average_a_e /= number_of_time_stamps
@@ -642,10 +655,13 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
 
         cop_data_sw[np.where(time_steps == t)[0][0]][0] = _x_e
         cop_data_sw[np.where(time_steps == t)[0][0]][1] = _y_e
+        raw_results = [real_x, real_y, estimated_x, estimated_y]
+        for _i in range(len(raw_results)):
+            raw_data_sw[np.where(time_steps == t)[0][0]][_i] = raw_results[_i]
 
-    np.savetxt('FittedSideWeightShift.csv', cop_data_sw, delimiter=',')
-    np.savetxt('FittedFrontWeightShift.csv', cop_data_fw, delimiter=',')
-    np.savetxt('FittedFootSlides.csv', cop_data_fs, delimiter=',')
+    np.savetxt('FittedSideWeightShift.csv', raw_data_sw, delimiter=',')
+    #np.savetxt('FittedFrontWeightShift.csv', raw_data_fw, delimiter=',')
+    #np.savetxt('FittedFootSlides.csv', raw_data_fs, delimiter=',')
 
     sw_average_a_e /= number_of_time_stamps
     sw_average_x_e /= number_of_time_stamps
@@ -885,7 +901,7 @@ if __name__ == "__main__":
                       rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR, "Default Track Geometry")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
 
-    '''
+
     a_e, x_e, y_e, scenario_errors, animation_frames = run_footprint_placement_scenarios(sensor_heights, sensor_widths,
                                                                                          pitch_heights, pitch_widths,
                                                                                          left_foot_profile,
@@ -893,8 +909,8 @@ if __name__ == "__main__":
     print_errors(a_e, x_e, y_e, scenario_errors)
     #create_animated_plot(animation_frames)
 
-    '''
 
+    '''
     minimum_pitch_height = (rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0] / pitch_step_size
     minimum_pitch_width = (rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1] / pitch_step_size
     track_height = float(sensor_heights[0])
@@ -1016,4 +1032,4 @@ if __name__ == "__main__":
                       valid_pitch_combinations[minimum_error_index][1],
                       rescaled_mat_size[0], rescaled_mat_size[1],
                       SCALE_FACTOR, "Optimal Track Geometry")
-
+    '''
