@@ -437,12 +437,12 @@ def run_footprint_placement_scenarios(_conductor_heights, _conductor_widths, _pi
     raw_data_sw = np.zeros((number_of_time_stamps, 4))
     raw_data_fw = np.zeros((number_of_time_stamps, 4))
     raw_data_fs = np.zeros((number_of_time_stamps, 4))
-    fs_left = np.load("./Data/fs_left.npy")
-    fs_right = np.load("./Data/fs_right.npy")
-    fw_left = np.load("./Data/fw_left.npy")
-    fw_right = np.load("./Data/fw_right.npy")
-    sw_left = np.load("./Data/sw_left.npy")
-    sw_right = np.load("./Data/sw_right.npy")
+    fs_left = np.load("./InputData/fs_left.npy")
+    fs_right = np.load("./InputData/fs_right.npy")
+    fw_left = np.load("./InputData/fw_left.npy")
+    fw_right = np.load("./InputData/fw_right.npy")
+    sw_left = np.load("./InputData/sw_left.npy")
+    sw_right = np.load("./InputData/sw_right.npy")
 
     # sliding foot
     for t in time_steps:
