@@ -350,14 +350,34 @@ def compute_absolute_error(x, y):
     return a
 
 
-def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths, matrix_height, matrix_width,
-                      scale_factor, plot_title):
-    fig, ax = plt.subplots(figsize=(6, 6))
+def plot_layouts(matrix_height, matrix_width, scale_factor,
+                 plot_title_1, conductor_heights_1, conductor_widths_1, pitch_heights_1, pitch_widths_1,
+                 plot_title_2, conductor_heights_2, conductor_widths_2, pitch_heights_2, pitch_widths_2):
+
+    fig = plt.figure(figsize=(12, 6))
+    ax1 = fig.add_subplot(1, 2, 1)
+    create_plot(matrix_height, matrix_width, scale_factor, ax1,
+                plot_title_1, conductor_heights_1, conductor_widths_1, pitch_heights_1, pitch_widths_1)
+    plt.xlabel("Width (m)")
+    plt.ylabel("Height (m)")
+
+    ax2 = fig.add_subplot(1, 2, 2)
+    create_plot(matrix_height, matrix_width, scale_factor, ax2,
+                plot_title_2, conductor_heights_2, conductor_widths_2, pitch_heights_2, pitch_widths_2)
+
+    plt.xlabel("Width (m)")
+    plt.ylabel("Height (m)")
+    plt.grid(False)
+    plt.show()
+
+
+def create_plot(matrix_height, matrix_width, scale_factor, axis, plot_title,
+                conductor_heights, conductor_widths, pitch_heights, pitch_widths):
 
     # Draw the matrix boundary
     matrix_rect = patches.Rectangle((0, 0), matrix_width / scale_factor, matrix_height / scale_factor,
                                     linewidth=1, edgecolor='black', facecolor='none')
-    ax.add_patch(matrix_rect)
+    axis.add_patch(matrix_rect)
     track_x = -conductor_widths[0]
     track_y = -conductor_heights[0]
     # Draw each track as a rectangle centered on x_positions and y_positions
@@ -366,25 +386,20 @@ def plot_track_layout(conductor_heights, conductor_widths, pitch_heights, pitch_
         track_x += (p_w + c_w) / scale_factor
         track_rect = patches.Rectangle((track_x, 0), c_w, matrix_height / scale_factor,
                                        linewidth=1, edgecolor="None", alpha=0.5, facecolor="orange")
-        ax.add_patch(track_rect)
+        axis.add_patch(track_rect)
 
     for c_h, p_h in zip(conductor_heights, pitch_heights):
         # Calculate the bottom-left corner of each track
         track_y += (p_h + c_h) / scale_factor
         track_rect = patches.Rectangle((0, track_y), matrix_width / scale_factor, c_h,
                                        linewidth=1, edgecolor="None", alpha=0.5, facecolor="orange")
-        ax.add_patch(track_rect)
+        axis.add_patch(track_rect)
 
     # Set axis limits and labels
-    ax.set_xlim(-0.01, matrix_width / scale_factor + 0.01)
-    ax.set_ylim(-0.01, matrix_height / scale_factor + 0.01)
-    ax.set_aspect('equal')
-    ax.set_title(plot_title)
-    plt.xlabel("Width (m)")
-    plt.ylabel("Height (m)")
-    plt.grid(False)
-
-    plt.show()
+    axis.set_xlim(-0.01, matrix_width / scale_factor + 0.01)
+    axis.set_ylim(-0.01, matrix_height / scale_factor + 0.01)
+    axis.set_aspect('equal')
+    axis.set_title(plot_title)
 
 
 def redistribute_y_pressure(matrix, cut_offs, mass):
@@ -456,26 +471,24 @@ if __name__ == "__main__":
     # Default Geometry
     sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
-    pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
-    pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
+    pitch_heights_1 = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
+    pitch_widths_1 = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
 
     absolute_error, x_error, y_error, scenario_errors = run_layout_scenarios(sensor_heights, sensor_widths,
-                                                                             pitch_heights, pitch_widths,
+                                                                             pitch_heights_1, pitch_widths_1,
                                                                              USER_MASS, left_foot_profile,
                                                                              right_foot_profile, True,
                                                                              RANDOM_MAP)
 
     print("Default Errors")
-    plot_track_layout(sensor_heights, sensor_widths, pitch_heights, pitch_widths,
-                      rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR, "Default Track Geometry")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
 
     # Optimal Geometry
-    pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
-    pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
+    pitch_heights_2 = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
+    pitch_widths_2 = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
 
     absolute_error, x_error, y_error, scenario_errors = run_layout_scenarios(sensor_heights, sensor_widths,
-                                                                             pitch_heights, pitch_widths,
+                                                                             pitch_heights_2, pitch_widths_2,
                                                                              USER_MASS, left_foot_profile,
                                                                              right_foot_profile, True,
                                                                              RANDOM_MAP)
@@ -483,3 +496,7 @@ if __name__ == "__main__":
     print("Optimal Geometry Errors")
 
     print_errors(absolute_error, x_error, y_error, scenario_errors)
+
+    plot_layouts(rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR,
+                 "Default Track Geometry", sensor_heights, sensor_widths, pitch_heights_1, pitch_widths_1,
+                 "Optimal Track Geometry", sensor_heights, sensor_widths, pitch_heights_2, pitch_widths_2)
