@@ -474,14 +474,14 @@ if __name__ == "__main__":
     # Default Geometry
     sensor_heights = np.array(resolution[0] * [rescaled_mat_size[0] / resolution[0] / 2])
     sensor_widths = np.array(resolution[1] * [rescaled_mat_size[1] / resolution[1] / 2])
-    pitch_heights_1 = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
-    pitch_widths_1 = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
+    default_pitch_heights = np.array(resolution[0] * [(rescaled_mat_size[0] - sensor_heights.sum()) / resolution[0]])
+    default_pitch_widths = np.array(resolution[1] * [(rescaled_mat_size[1] - sensor_widths.sum()) / resolution[1]])
 
     (absolute_error, x_error, y_error, scenario_errors,
      side_weight_shift_uniform_raw_data,
      front_weight_shift_uniform_raw_data,
      foot_slide_uniform_raw_data) = run_layout_scenarios(sensor_heights, sensor_widths,
-                                                         pitch_heights_1, pitch_widths_1,
+                                                         default_pitch_heights, default_pitch_widths,
                                                          USER_MASS, left_foot_profile,
                                                          right_foot_profile, True,
                                                          RANDOM_MAP)
@@ -490,14 +490,14 @@ if __name__ == "__main__":
     print_errors(absolute_error, x_error, y_error, scenario_errors)
 
     # Optimal Geometry
-    pitch_heights_2 = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
-    pitch_widths_2 = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
+    optimal_pitch_heights = np.array([0.064, 0.016, 0.016, 0.016, 0.032, 0.016, 0.016, 0.016])
+    optimal_pitch_widths = np.array([0.032, 0.032, 0.016, 0.016, 0.064, 0.016, 0.016, 0.032])
 
     (absolute_error, x_error, y_error, scenario_errors,
      side_weight_shift_nonuniform_raw_data,
      front_weight_shift_nonuniform_raw_data,
      foot_slide_nonuniform_raw_data) = run_layout_scenarios(sensor_heights, sensor_widths,
-                                                            pitch_heights_2, pitch_widths_2,
+                                                            optimal_pitch_heights, optimal_pitch_widths,
                                                             USER_MASS, left_foot_profile,
                                                             right_foot_profile, True,
                                                             RANDOM_MAP)
@@ -507,8 +507,10 @@ if __name__ == "__main__":
     print_errors(absolute_error, x_error, y_error, scenario_errors)
 
     plot_layouts(rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR,
-                 "Default Track Geometry", sensor_heights, sensor_widths, pitch_heights_1, pitch_widths_1,
-                 "Optimal Track Geometry", sensor_heights, sensor_widths, pitch_heights_2, pitch_widths_2)
+                 "Default Track Geometry", sensor_heights, sensor_widths,
+                 default_pitch_heights, default_pitch_widths,
+                 "Optimal Track Geometry", sensor_heights, sensor_widths,
+                 optimal_pitch_heights, optimal_pitch_widths)
 
     np.savetxt('./OutputData/UniformSideWeightShift.csv',
                side_weight_shift_uniform_raw_data, delimiter=',')
