@@ -496,7 +496,7 @@ def save_layout(conductor_heights, conductor_widths, pitch_heights, pitch_widths
         "Mat_Height": mat_height,
         "Mat_Width": mat_width
     }
-    with open("layout_2.json", "w") as file:
+    with open("./OutputData/AnOptimalLayout.json", "w") as file:
         json.dump(layout_data, file, indent=4)
 
 
@@ -707,10 +707,11 @@ if __name__ == "__main__":
                  valid_errors[minimum_error_index][2], valid_errors[minimum_error_index][3])
     print(f"\nOptimal Heights: {valid_pitch_combinations[minimum_error_index][0]}\n"
           f"Optimal Widths: {valid_pitch_combinations[minimum_error_index][1]}")
-    save_layout(sensor_heights.tolist(), sensor_widths.tolist(),
-                optimal_pitch_heights,
-                optimal_pitch_widths,
-                mat_size[0], mat_size[1])
+    # Saves the optimal track layout
+    #  save_layout(sensor_heights.tolist(), sensor_widths.tolist(),
+    #              optimal_pitch_heights,
+    #              optimal_pitch_widths,
+    #              mat_size[0], mat_size[1])
 
     plot_layouts(rescaled_mat_size[0], rescaled_mat_size[1], SCALE_FACTOR,
                  "Default Track Geometry", sensor_heights, sensor_widths,
