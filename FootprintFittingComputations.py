@@ -836,7 +836,8 @@ if __name__ == "__main__":
     right_foot_centre = (round(right_foot_centre[0] * SCALE_FACTOR * 1000),
                          round(right_foot_centre[1] * SCALE_FACTOR * 1000))
 
-    left_foot_profile = np.genfromtxt("pressure_map.csv", delimiter=',', skip_header=0, filling_values=np.nan)
+    left_foot_profile = np.genfromtxt("./InputData/pressure_map.csv",
+                                      delimiter=',', skip_header=0, filling_values=np.nan)
     left_foot_profile = zoom(left_foot_profile, zoom=(SCALE_FACTOR, SCALE_FACTOR))
 
     left_foot_profile = rescale_mass(left_foot_profile, USER_MASS / 2)
