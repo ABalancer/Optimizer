@@ -9,9 +9,6 @@ import json
 from scipy.ndimage import zoom
 
 
-# the average errors can be incorrect sometimes
-
-
 def sum_square_section(matrix, midpoint, row_length, col_length):
     row_length *= 1000
     col_length *= 1000
