@@ -68,23 +68,23 @@ def centre_of_pressure(force_map):
     return x, y
 
 
-def centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map):
+def centre_of_pressure_estimate(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths, _force_map):
     # Initialize sums
     numerator_x = 0
     numerator_y = 0
     denominator = np.float64(0)
 
     # Loop over all regions i (height) and j (width)
-    for i in range(conductor_heights.shape[0]):
-        for j in range(conductor_widths.shape[0]):
+    for _i in range(_sensor_heights.shape[0]):
+        for _j in range(_sensor_widths.shape[0]):
             # Compute x_j and y_i based on the provided formulas
-            x_j = 0.5 * (conductor_widths[j]) + sum(conductor_widths[k] + pitch_widths[k] for k in range(j))
-            y_i = 0.5 * (conductor_heights[i]) + sum(conductor_heights[k] + pitch_heights[k] for k in range(i))
+            x_j = 0.5 * (_sensor_widths[_j]) + sum(_sensor_widths[_k] + _pitch_widths[_k] for _k in range(_j))
+            y_i = 0.5 * (_sensor_heights[_i]) + sum(_sensor_heights[_k] + _pitch_heights[_k] for _k in range(_i))
 
             # Add to numerators and denominator
-            numerator_x += x_j * force_map[i][j]
-            numerator_y += y_i * force_map[i][j]
-            denominator += force_map[i][j]
+            numerator_x += x_j * _force_map[_i][_j]
+            numerator_y += y_i * _force_map[_i][_j]
+            denominator += _force_map[_i][_j]
 
     # Compute centre of force_map
     x_E = numerator_x / denominator if denominator != 0 else 0
@@ -109,12 +109,13 @@ def create_low_res_mat(_conductor_heights, _conductor_widths, _pitch_heights, _p
     return low_res_pressure_map
 
 
-def compute_sensing_ratios(sensor_heights, sensor_widths, pitch_heights, pitch_widths):
-    sensing_ratios = np.zeros((sensor_heights.shape[0], sensor_widths.shape[0]))
-    for i in range(0, sensor_heights.shape[0]):
-        for j in range(0, sensor_widths.shape[0]):
-            sensing_ratios[i][j] = ((sensor_heights[i] + pitch_heights[i]) * (sensor_widths[j] + pitch_widths[j])
-                                    / (sensor_heights[i]*sensor_widths[j]))
+def compute_sensing_ratios(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths):
+    sensing_ratios = np.zeros((_sensor_heights.shape[0], _sensor_widths.shape[0]))
+    for _i in range(0, _sensor_heights.shape[0]):
+        for _j in range(0, _sensor_widths.shape[0]):
+            sensing_ratios[_i][_j] = ((_sensor_heights[_i] + _pitch_heights[_i]) *
+                                      (_sensor_widths[_j] + _pitch_widths[_j])
+                                      / (_sensor_heights[_i] * _sensor_widths[_j]))
     return sensing_ratios
 
 
@@ -123,22 +124,22 @@ def rescale_mass(foot_profile, mass):
     return foot_profile * scale_factor
 
 
-def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map, random_map=None):
+def convert_force_to_adc(_R0, _k, _conductor_heights, _conductor_widths, _force_map, _random_map=None):
     _resolution = 4095
-    adc_map = np.zeros(force_map.shape, dtype=np.int16)
-    for i in range(conductor_heights.shape[0]):
-        for j in range(conductor_widths.shape[0]):
-            area = conductor_heights[i] * conductor_widths[j]
-            base_resistance = R0 / area
+    _adc_map = np.zeros(_force_map.shape, dtype=np.int16)
+    for _i in range(_conductor_heights.shape[0]):
+        for _j in range(_conductor_widths.shape[0]):
+            area = _conductor_heights[_i] * _conductor_widths[_j]
+            base_resistance = _R0 / area
             divider_resistance = base_resistance / 5
-            if random_map is None:
-                sensor_resistance = R0 * area / (R0 * k * force_map[i][j] + pow(area, 2))
+            if _random_map is None:
+                sensor_resistance = _R0 * area / (_R0 * _k * _force_map[_i][_j] + pow(area, 2))
                 adc_result = np.int16(np.round(
                     _resolution * divider_resistance/(sensor_resistance + divider_resistance)))
             else:
-                force = (force_map[i][j] / area + random_map[i][j]) * area
-                sensor_resistance = R0 * area / (R0 * k * force + pow(area, 2))
-                threshold_resistance = R0 * area / (R0 * k * FORCE_RANDOM_OFFSET * area + pow(area, 2))
+                force = (_force_map[_i][_j] / area + _random_map[_i][_j]) * area
+                sensor_resistance = _R0 * area / (_R0 * _k * force + pow(area, 2))
+                threshold_resistance = _R0 * area / (_R0 * _k * FORCE_RANDOM_OFFSET * area + pow(area, 2))
                 adc_threshold = np.int16(np.round(_resolution * divider_resistance /
                                                   (threshold_resistance + divider_resistance)))
                 adc_offset = np.int16(np.round(_resolution * divider_resistance /
@@ -148,74 +149,75 @@ def convert_force_to_adc(R0, k, conductor_heights, conductor_widths, force_map, 
                 # removes random base offsets
                 if adc_result <= adc_threshold:
                     adc_result = adc_offset
-            restored_pressure = 1 / (R0 * k) * (R0 / (divider_resistance * (_resolution / adc_result - 1)) - area)
-            adc_map[i][j] = restored_pressure * area
+            restored_pressure = 1 / (_R0 * _k) * (_R0 / (divider_resistance * (_resolution / adc_result - 1)) - area)
+            _adc_map[_i][_j] = restored_pressure * area
 
-    return adc_map
+    return _adc_map
 
 
-def compute_error_for_instance(conductor_heights, conductor_widths,
-                               pitch_heights, pitch_widths, force_map, piezo=False, random_map=None):
+def compute_error_for_instance(_sensor_heights, _sensor_widths,
+                               _pitch_heights, _pitch_widths, _force_map, _piezo=False, _random_map=None):
     # compute real CoP
-    x_cop, y_cop = centre_of_pressure(force_map)
+    x_cop, y_cop = centre_of_pressure(_force_map)
     x_cop /= 1000
     y_cop /= 1000
-    sensor_forces = create_low_res_mat(conductor_heights, conductor_widths, pitch_heights, pitch_widths, force_map)
+    sensor_forces = create_low_res_mat(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths, _force_map)
     # compute estimated CoP
-    if piezo:
-        adc_map = convert_force_to_adc(R0, k, conductor_heights, conductor_widths, sensor_forces, random_map)
+    if _piezo:
+        adc_map = convert_force_to_adc(R0, k, _sensor_heights, _sensor_widths, sensor_forces, _random_map)
     else:
         adc_map = sensor_forces
-    x_cop_e, y_cop_e = centre_of_pressure_estimate(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
+    x_cop_e, y_cop_e = centre_of_pressure_estimate(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths,
                                                    adc_map)
-    x_e = 100 * abs((x_cop - x_cop_e) / x_cop)
-    y_e = 100 * abs((y_cop - y_cop_e) / y_cop)
-    a_e = compute_absolute_error(x_e, y_e)
-    return x_e, y_e, a_e, adc_map, [x_cop, y_cop, x_cop_e, y_cop_e]
+    _x_e = 100 * abs((x_cop - x_cop_e) / x_cop)
+    _y_e = 100 * abs((y_cop - y_cop_e) / y_cop)
+    _a_e = compute_absolute_error(_x_e, _y_e)
+    return _x_e, _y_e, _a_e, adc_map, [x_cop, y_cop, x_cop_e, y_cop_e]
 
 
-def run_side_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
-                                   user_mass, left_foot_profile, right_foot_profile, piezo=False, random_map=None):
-    average_x_e = 0
-    average_y_e = 0
-    average_a_e = 0
+def run_side_weight_shift_scenario(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths,
+                                   _user_mass, _left_foot_profile, _right_foot_profile, _piezo=False, _random_map=None):
+    _average_x_e = 0
+    _average_y_e = 0
+    _average_a_e = 0
 
     time_step = 0.1  # Seconds
     time_steps = np.arange(0, total_time + time_step, time_step)
     number_of_time_stamps = len(time_steps)
-    heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
+    heatmaps = np.zeros((number_of_time_stamps, _sensor_heights.shape[0], _sensor_widths.shape[0]))
 
     cop_data = np.zeros((number_of_time_stamps, 2))
     raw_data = np.zeros((number_of_time_stamps, 4))
     for t in time_steps:
-        left_foot_mass = user_mass / total_time * (total_time - t)
-        right_foot_mass = user_mass - left_foot_mass
-        temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
-        temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
+        left_foot_mass = _user_mass / total_time * (total_time - t)
+        right_foot_mass = _user_mass - left_foot_mass
+        temp_left_foot_profile = rescale_mass(_left_foot_profile, left_foot_mass)
+        temp_right_foot_profile = rescale_mass(_right_foot_profile, right_foot_mass)
         high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
-        x_e, y_e, a_e, adc_map, raw_results = compute_error_for_instance(conductor_heights, conductor_widths,
-                                                                         pitch_heights, pitch_widths,
-                                                                         high_res_heatmap_matrix, piezo, random_map)
-        average_x_e += x_e
-        average_y_e += y_e
-        average_a_e += a_e
+        _x_e, _y_e, _a_e, adc_map, raw_results = compute_error_for_instance(_sensor_heights, _sensor_widths,
+                                                                            _pitch_heights, _pitch_widths,
+                                                                            high_res_heatmap_matrix, _piezo,
+                                                                            _random_map)
+        _average_x_e += _x_e
+        _average_y_e += _y_e
+        _average_a_e += _a_e
 
         heatmaps[np.where(time_steps == t)] = adc_map
-        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
-        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
+        cop_data[np.where(time_steps == t)[0][0]][0] = _x_e
+        cop_data[np.where(time_steps == t)[0][0]][1] = _y_e
         for _i in range(len(raw_results)):
             raw_data[np.where(time_steps == t)[0][0]][_i] = raw_results[_i]
 
-    average_x_e /= number_of_time_stamps
-    average_y_e /= number_of_time_stamps
-    average_a_e /= number_of_time_stamps
+    _average_x_e /= number_of_time_stamps
+    _average_y_e /= number_of_time_stamps
+    _average_a_e /= number_of_time_stamps
 
-    return average_x_e, average_y_e, average_a_e, raw_data, heatmaps
+    return _average_x_e, _average_y_e, _average_a_e, raw_data, heatmaps
 
 
-def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
-                            user_mass, left_foot_profile, right_foot_profile, piezo=False, random_map=None):
+def run_foot_slide_scenario(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths,
+                            _user_mass, _left_foot_profile, _right_foot_profile, _piezo=False, _random_map=None):
     average_x_e = 0
     average_y_e = 0
     average_a_e = 0
@@ -223,16 +225,16 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     time_step = 0.1  # Seconds
     time_steps = np.arange(0, total_time + time_step, time_step)
     number_of_time_stamps = len(time_steps)
-    heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
-    left_foot_mass = user_mass / 2
-    right_foot_mass = user_mass / 2
+    heatmaps = np.zeros((number_of_time_stamps, _sensor_heights.shape[0], _sensor_widths.shape[0]))
+    left_foot_mass = _user_mass / 2
+    right_foot_mass = _user_mass / 2
     _left_foot_centre = (240, 150)  # in mm
     _right_foot_centre = (240, 330)  # in mm
     _left_foot_centre = (round(_left_foot_centre[0] * SCALE_FACTOR), round(_left_foot_centre[1] * SCALE_FACTOR))
     _right_foot_centre = (round(_right_foot_centre[0] * SCALE_FACTOR), round(_right_foot_centre[1] * SCALE_FACTOR))
-    temp_left_foot_profile = rescale_mass(left_foot_profile, left_foot_mass)
-    temp_right_foot_profile = rescale_mass(right_foot_profile, right_foot_mass)
-    foot_height, foot_width = left_foot_profile.shape
+    temp_left_foot_profile = rescale_mass(_left_foot_profile, left_foot_mass)
+    temp_right_foot_profile = rescale_mass(_right_foot_profile, right_foot_mass)
+    foot_height, foot_width = _left_foot_profile.shape
     left_foot_start = round(foot_width / 2)
     right_foot_end = (1000 * rescaled_mat_size[1]) - round(foot_width / 2)
     left_foot_gradient = 2 * (_left_foot_centre[1] - left_foot_start) / total_time
@@ -251,16 +253,17 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
 
         high_res_heatmap_matrix = move_feet(left_foot_position, right_foot_position,
                                             temp_left_foot_profile, temp_right_foot_profile, high_res_resolution)
-        x_e, y_e, a_e, adc_map, raw_results = compute_error_for_instance(conductor_heights, conductor_widths,
-                                                                         pitch_heights, pitch_widths,
-                                                                         high_res_heatmap_matrix, piezo, random_map)
-        average_x_e += x_e
-        average_y_e += y_e
-        average_a_e += a_e
+        _x_e, _y_e, _a_e, adc_map, raw_results = compute_error_for_instance(_sensor_heights, _sensor_widths,
+                                                                            _pitch_heights, _pitch_widths,
+                                                                            high_res_heatmap_matrix, _piezo,
+                                                                            _random_map)
+        average_x_e += _x_e
+        average_y_e += _y_e
+        average_a_e += _a_e
 
         heatmaps[np.where(time_steps == t)] = adc_map
-        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
-        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
+        cop_data[np.where(time_steps == t)[0][0]][0] = _x_e
+        cop_data[np.where(time_steps == t)[0][0]][1] = _y_e
         for _i in range(len(raw_results)):
             raw_data[np.where(time_steps == t)[0][0]][_i] = raw_results[_i]
     average_x_e /= number_of_time_stamps
@@ -271,16 +274,17 @@ def run_foot_slide_scenario(conductor_heights, conductor_widths, pitch_heights, 
     return average_x_e, average_y_e, average_a_e, raw_data, heatmaps
 
 
-def run_front_weight_shift_scenario(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
-                                    user_mass, left_foot_profile, right_foot_profile, piezo=False, random_map=None):
-    average_x_e = 0
-    average_y_e = 0
-    average_a_e = 0
+def run_front_weight_shift_scenario(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths,
+                                    _user_mass, _left_foot_profile, _right_foot_profile,
+                                    _piezo=False, _random_map=None):
+    _average_x_e = 0
+    _average_y_e = 0
+    _average_a_e = 0
 
     time_step = 0.1  # Seconds
     time_steps = np.arange(0, total_time + time_step, time_step)
     number_of_time_stamps = len(time_steps)
-    heatmaps = np.zeros((number_of_time_stamps, conductor_heights.shape[0], conductor_widths.shape[0]))
+    heatmaps = np.zeros((number_of_time_stamps, _sensor_heights.shape[0], _sensor_widths.shape[0]))
 
     cop_data = np.zeros((number_of_time_stamps, 2))
     raw_data = np.zeros((number_of_time_stamps, 4))
@@ -291,53 +295,54 @@ def run_front_weight_shift_scenario(conductor_heights, conductor_widths, pitch_h
         else:
             bottom_cut_off = 4 / (3 * total_time) * t - 2 / 3
             top_cut_off = 1
-        left_foot = redistribute_y_pressure(left_foot_profile,
-                                            (bottom_cut_off, top_cut_off), user_mass / 2)
-        right_foot = redistribute_y_pressure(right_foot_profile,
-                                             (bottom_cut_off, top_cut_off), user_mass / 2)
+        left_foot = redistribute_y_pressure(_left_foot_profile,
+                                            (bottom_cut_off, top_cut_off), _user_mass / 2)
+        right_foot = redistribute_y_pressure(_right_foot_profile,
+                                             (bottom_cut_off, top_cut_off), _user_mass / 2)
 
         high_res_heatmap_matrix = move_feet(left_foot_centre, right_foot_centre,
                                             left_foot, right_foot, high_res_resolution)
-        x_e, y_e, a_e, adc_map, raw_results = compute_error_for_instance(conductor_heights, conductor_widths,
-                                                                         pitch_heights, pitch_widths,
-                                                                         high_res_heatmap_matrix, piezo, random_map)
-        average_x_e += x_e
-        average_y_e += y_e
-        average_a_e += a_e
+        _x_e, _y_e, _a_e, adc_map, raw_results = compute_error_for_instance(_sensor_heights, _sensor_widths,
+                                                                            _pitch_heights, _pitch_widths,
+                                                                            high_res_heatmap_matrix, _piezo,
+                                                                            _random_map)
+        _average_x_e += _x_e
+        _average_y_e += _y_e
+        _average_a_e += _a_e
 
         heatmaps[np.where(time_steps == t)] = adc_map
-        cop_data[np.where(time_steps == t)[0][0]][0] = x_e
-        cop_data[np.where(time_steps == t)[0][0]][1] = y_e
+        cop_data[np.where(time_steps == t)[0][0]][0] = _x_e
+        cop_data[np.where(time_steps == t)[0][0]][1] = _y_e
         for _i in range(len(raw_results)):
             raw_data[np.where(time_steps == t)[0][0]][_i] = raw_results[_i]
-    average_x_e /= number_of_time_stamps
-    average_y_e /= number_of_time_stamps
-    average_a_e /= number_of_time_stamps
-    return average_x_e, average_y_e, average_a_e, raw_data, heatmaps
+    _average_x_e /= number_of_time_stamps
+    _average_y_e /= number_of_time_stamps
+    _average_a_e /= number_of_time_stamps
+    return _average_x_e, _average_y_e, _average_a_e, raw_data, heatmaps
 
 
-def run_layout_scenarios(conductor_heights, conductor_widths, pitch_heights, pitch_widths,
-                         user_mass, left_foot_profile, right_foot_profile, piezo=False, random_map=None):
+def run_layout_scenarios(_sensor_heights, _sensor_widths, _pitch_heights, _pitch_widths,
+                         _user_mass, _left_foot_profile, _right_foot_profile, _piezo=False, _random_map=None):
     _x_error = 0
     _y_error = 0
 
     (x_error_1, y_error_1, a_error_1,
-     side_weight_shift_raw_data, heatmaps) = run_side_weight_shift_scenario(conductor_heights, conductor_widths,
-                                                                            pitch_heights, pitch_widths, user_mass,
-                                                                            left_foot_profile, right_foot_profile,
-                                                                            piezo, random_map)
+     side_weight_shift_raw_data, heatmaps) = run_side_weight_shift_scenario(_sensor_heights, _sensor_widths,
+                                                                            _pitch_heights, _pitch_widths, _user_mass,
+                                                                            _left_foot_profile, _right_foot_profile,
+                                                                            _piezo, _random_map)
 
     (x_error_2, y_error_2, a_error_2,
-     front_weight_shift_raw_data, heatmaps) = run_front_weight_shift_scenario(conductor_heights, conductor_widths,
-                                                                              pitch_heights, pitch_widths, user_mass,
-                                                                              left_foot_profile, right_foot_profile,
-                                                                              piezo, random_map)
+     front_weight_shift_raw_data, heatmaps) = run_front_weight_shift_scenario(_sensor_heights, _sensor_widths,
+                                                                              _pitch_heights, _pitch_widths, _user_mass,
+                                                                              _left_foot_profile, _right_foot_profile,
+                                                                              _piezo, _random_map)
 
     (x_error_3, y_error_3, a_error_3,
-     foot_slide_raw_data, heatmaps) = run_foot_slide_scenario(conductor_heights, conductor_widths,
-                                                              pitch_heights, pitch_widths, user_mass,
-                                                              left_foot_profile, right_foot_profile,
-                                                              piezo, random_map)
+     foot_slide_raw_data, heatmaps) = run_foot_slide_scenario(_sensor_heights, _sensor_widths,
+                                                              _pitch_heights, _pitch_widths, _user_mass,
+                                                              _left_foot_profile, _right_foot_profile,
+                                                              _piezo, _random_map)
 
     _x_error = (x_error_1 + x_error_2 + x_error_3) / 3
     _y_error = (y_error_1 + y_error_2 + y_error_3) / 3
@@ -347,8 +352,8 @@ def run_layout_scenarios(conductor_heights, conductor_widths, pitch_heights, pit
             side_weight_shift_raw_data, front_weight_shift_raw_data, foot_slide_raw_data)
 
 
-def compute_absolute_error(x, y):
-    a = np.sqrt(np.pow(x, 2) + np.pow(y, 2))
+def compute_absolute_error(_x, _y):
+    a = np.sqrt(np.pow(_x, 2) + np.pow(_y, 2))
     return a
 
 
@@ -486,7 +491,7 @@ if __name__ == "__main__":
                                                          right_foot_profile, True,
                                                          RANDOM_MAP)
 
-    print("Default Errors")
+    print("\nDefault Errors")
     print_errors(absolute_error, x_error, y_error, scenario_errors)
 
     # Optimal Geometry
@@ -502,7 +507,7 @@ if __name__ == "__main__":
                                                             right_foot_profile, True,
                                                             RANDOM_MAP)
 
-    print("Optimal Geometry Errors")
+    print("\nOptimal Geometry Errors")
 
     print_errors(absolute_error, x_error, y_error, scenario_errors)
 
